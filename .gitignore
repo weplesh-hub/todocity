@@ -1,0 +1,8 @@
+# Служебные файлы ОС / OneDrive
+Thumbs.db
+desktop.ini
+*.tmp
+~$*
+# Прочее
+*.log
+.DS_Store

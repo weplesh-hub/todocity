@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Список дел на день</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="style.css?v=22">
+<script src="main.js?v=24" defer></script>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-left">
+    <div class="brand">
+      <img src="logo-todocity.svg" alt="TODOCITY" class="brand-img">
+    </div>
+    <div class="date-block">
+      <div class="date-label" id="dateLabel">Сегодня</div>
+      <div class="date-main">
+        <div class="date-text">
+          <div class="date-day" id="dateDay">--</div>
+          <div class="date-month" id="dateMonth">---</div>
+        </div>
+        <button class="calendar-toggle-btn" id="calToggle" aria-label="Открыть календарь">
+          <i class="fa-regular fa-calendar"></i>
+        </button>
+        <button class="calendar-toggle-btn" id="timelineToggle" aria-label="Почасовое расписание" title="Почасовое расписание">
+          <i class="fa-regular fa-clock"></i>
+        </button>
+      </div>
+      <div class="date-weekday" id="dateWeekday">---</div>
+      <div class="calendar-popover" id="calendarPopover" style="display: none;"></div>
+    </div>
+    </div>
+    <div class="title-block">
+      <div class="progress-ring">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle class="bg" cx="50" cy="50" r="42"></circle>
+          <circle class="fg" cx="50" cy="50" r="42" stroke-dasharray="263.9" stroke-dashoffset="263.9" id="progressCircle"></circle>
+        </svg>
+        <div class="progress-text">
+          <div class="progress-num" id="progressNum">0%</div>
+          <div class="progress-label">Готово</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="top-controls">
+    <button id="toggleSidebarBtn" class="sidebar-toggle-btn" data-action="toggle-sidebar" title="Свернуть/Развернуть панель">
+      <i class="fa-solid fa-chevron-left"></i>
+      <span>Свернуть панель</span>
+    </button>
+    <button id="settingsBtn" class="settings-btn" data-action="open-settings" title="Настройки">
+      <i class="fa-solid fa-gear"></i>
+    </button>
+  </div>
+
+  <div class="main-grid">
+    <div class="left-container">
+      <div class="left-col">
+        <section class="card" id="formCard">
+          <h2 class="card-title"><span class="dot"></span>Новое дело</h2>
+          <form class="add-form" id="addForm">
+            <input type="text" class="input-text" id="taskInput" placeholder="Что нужно сделать сегодня?" maxlength="140" required>
+            
+<div class="form-collapsible">
+  <div class="field-group">
+  <div class="field-label">Дата начала работ</div>
+    <input type="date" class="input-text" id="taskDueDateInput">
+  </div>
+
+  <div class="field-group">
+    <div class="field-label">Время начала</div>
+    <div class="time-input-wrap">
+      <input type="time" class="input-text" id="taskStartTimeInput">
+      <button type="button" class="time-clear-btn" data-clear="taskStartTimeInput" aria-label="Очистить время начала" title="Очистить"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+
+  <div class="field-group">
+    <div class="field-label">Время окончания</div>
+    <div class="time-input-wrap">
+      <input type="time" class="input-text" id="taskEndTimeInput">
+      <button type="button" class="time-clear-btn" data-clear="taskEndTimeInput" aria-label="Очистить время окончания" title="Очистить"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+
+  <div class="field-group">
+  <div class="field-label">Дата завершения работ</div>
+  <input type="date" class="input-text" id="taskEndDateInput">
+</div>
+
+  <div class="field-group">
+    <div class="field-label">Список</div>
+    <select id="taskGroupSelect" class="select-styled"></select>
+  </div>
+
+  <div class="field-group">
+    <div class="field-label">Теги</div>
+    <div class="tag-picker" id="formTagPicker"></div>
+  </div>
+
+  <div class="field-group">
+    <div class="field-label">Важность</div>
+    <div class="importance-picker">
+      <button type="button" class="imp-btn active" data-imp="none"><div class="imp-bars"><span></span><span></span><span></span></div>Без</button>
+      <button type="button" class="imp-btn" data-imp="low"><div class="imp-bars"><span></span><span></span><span></span></div>Низкая</button>
+      <button type="button" class="imp-btn" data-imp="medium"><div class="imp-bars"><span></span><span></span><span></span></div>Средняя</button>
+      <button type="button" class="imp-btn" data-imp="high"><div class="imp-bars"><span></span><span></span><span></span></div>Высокая</button>
+    </div>
+  </div>
+
+  <!-- НОВОЕ ПОЛЕ: ТАЙМЕР -->
+  <div class="field-group">
+    <div class="field-label">Таймер</div>
+    <select class="select-styled" id="taskTimerSelect">
+      <option value="300">5 минут</option>
+      <option value="600">10 минут</option>
+      <option value="900">15 минут</option>
+      <option value="1800" selected>30 минут</option>
+      <option value="2700">45 минут</option>
+      <option value="3600">60 минут</option>
+      <option value="5400">90 минут</option>
+    </select>
+  </div>
+
+  <!-- НОВОЕ ПОЛЕ: ПОВТОР -->
+  <div class="field-group">
+    <div class="field-label">Повтор</div>
+    <div class="repeat-picker" id="formRepeatPicker">
+      <div class="repeat-options">
+        <button type="button" class="repeat-opt-btn active" data-rep="none">Без повтора</button>
+        <button type="button" class="repeat-opt-btn" data-rep="daily">Ежедневно</button>
+        <button type="button" class="repeat-opt-btn" data-rep="weekly">В дни недели</button>
+        <button type="button" class="repeat-opt-btn" data-rep="monthly">Ежемесячно</button>
+      </div>
+      <div class="weekdays-picker" id="formWeekdaysPicker" style="display: none;">
+        <button type="button" class="weekday-btn" data-day="0">Вс</button>
+        <button type="button" class="weekday-btn" data-day="1">Пн</button>
+        <button type="button" class="weekday-btn" data-day="2">Вт</button>
+        <button type="button" class="weekday-btn" data-day="3">Ср</button>
+        <button type="button" class="weekday-btn" data-day="4">Чт</button>
+        <button type="button" class="weekday-btn" data-day="5">Пт</button>
+        <button type="button" class="weekday-btn" data-day="6">Сб</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="field-group">
+    <div class="field-label">Заметка</div>
+    <textarea class="input-text" id="taskNoteInput" placeholder="Дополнительные детали..." maxlength="300" rows="2"></textarea>
+  </div>
+
+  <div class="form-actions">
+    <button type="button" class="btn-exit" id="formCancelBtn"><i class="fa-solid fa-xmark"></i>Выйти</button>
+    <button type="submit" class="btn-primary"><i class="fa-solid fa-plus"></i>Добавить</button>
+  </div>
+  <div class="form-actions-hint"><kbd>Enter</kbd> — добавить&nbsp;·&nbsp;<kbd>Esc</kbd> — выйти</div>
+</div>
+          </form>
+        </section>
+
+        <section class="card" id="listsCard">
+          <h2 class="card-title"><span class="dot teal"></span>Списки</h2>
+
+          <div class="groups-subheader">Базовые списки</div>
+    <div class="group-divider"></div>
+
+          <div class="groups-list" id="groupsBar"></div>
+        </section>
+
+        <section class="card" id="tagsCard">
+          <h2 class="card-title"><span class="dot amber"></span>Теги</h2>
+          <div class="tags-list" id="tagsBar"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <section class="card" id="tasksCard">
+        <div class="tasks-header">
+          <div class="tasks-title-wrap">
+            <h2 class="card-title" style="margin:0;"><span class="dot"></span><span id="tasksTitleText">Все дела</span> <span id="taskCount" style="color: var(--muted); font-weight: 400; font-family: 'Manrope', sans-serif;">(0)</span></h2>
+          </div>
+          <div class="filters">
+            <button class="filter-btn active" data-filter="all">Все<span class="count" id="cntAll">0</span></button>
+            <button class="filter-btn" data-filter="active">Активные<span class="count" id="cntActive">0</span></button>
+            <button class="filter-btn" data-filter="done">Готовые<span class="count" id="cntDone">0</span></button>
+            <button class="filter-btn share-btn" data-action="open-share" title="Отправить список на e-mail"><i class="fa-regular fa-envelope"></i></button>
+          </div>
+        </div>
+        <div class="tasks-list" id="tasksList"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно настроек -->
+<div class="modal-overlay" id="settingsModal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Системные настройки</h2>
+      <button class="modal-close" data-action="close-settings"><i class="fa-solid fa-times"></i></button>
+    </div>
+    <div class="setting-item">
+      <span class="setting-label">Цвет темы</span>
+      <div class="theme-switcher" id="themeSwitcher">
+        <button class="theme-btn active" data-theme-val="dark"><i class="fa-solid fa-moon"></i>Тёмная</button>
+        <button class="theme-btn" data-theme-val="light"><i class="fa-solid fa-sun"></i>Светлая</button>
+      </div>
+    </div>
+    <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 10px; border-bottom: none;">
+      <span class="setting-label">Видимость базовых списков</span>
+      <div class="visibility-list" id="visibilityList"></div>
+    </div>
+  </div>
+</div>
+<!-- Модальное окно заметки -->
+<div class="modal-overlay" id="noteModal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title" id="noteModalTitle">Заметка</h2>
+      <button class="modal-close" data-action="close-note"><i class="fa-solid fa-times"></i></button>
+    </div>
+    <div id="noteModalContent">
+      <!-- Здесь будет редактор -->
+    </div>
+    <div class="note-modal-footer" id="noteModalFooter">
+      <button class="btn-cancel" data-action="cancel-edit-note">Отмена</button>
+      <button class="btn-save" data-action="save-edit-note">Сохранить</button>
+    </div>
+  </div>
+</div>
+<!-- Модальное окно кастомизации иконки -->
+<div class="modal-overlay" id="iconModal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Настройка иконки</h2>
+      <button class="modal-close" data-action="close-icon-modal"><i class="fa-solid fa-times"></i></button>
+    </div>
+    <div class="setting-item" style="border: none; padding-bottom: 20px;">
+      <span class="setting-label">Цвет иконки</span>
+      <div class="palette-wrap">
+        <input type="color" id="iconColorPicker" class="color-picker" value="#ff6b4a">
+      </div>
+    </div>
+    <div class="field-label" style="margin-bottom: 10px;">Выбрать иконку</div>
+    <div class="icon-picker-grid" id="iconPickerGrid"></div>
+  </div>
+</div>
+<!-- Плавающий таймер -->
+<div class="floating-timer" id="floatingTimer" style="display: none;">
+  <div class="ft-icon"><i class="fa-regular fa-circle-dot"></i></div>
+  <div class="ft-info">
+    <div class="ft-text" id="ftText">Фокус</div>
+    <div class="ft-time" id="ftTime">30:00</div>
+  </div>
+  <button class="ft-btn" id="ftToggle" data-action="toggle-pause"><i class="fa-regular fa-circle-pause"></i></button>
+  <button class="ft-btn danger" id="ftStop" data-action="stop-timer"><i class="fa-regular fa-circle-stop"></i></button>
+</div>
+<!-- Выезжающая панель почасового расписания -->
+<div class="timeline-panel" id="timelinePanel">
+  <div class="timeline-header">
+    <h3 class="timeline-title">Почасовое расписание</h3>
+    <button class="timeline-close" id="timelineClose" aria-label="Задвинуть панель" title="Задвинуть панель">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  </div>
+  <div class="timeline-subtitle" id="timelineSubtitle">—</div>
+  <div class="timeline-now-clock" id="timelineNowClock" style="display: none;"></div>
+  <div class="timeline-hours" id="timelineHours"></div>
+</div>
+<!-- Модальное окно отправки списка на e-mail -->
+<div class="modal-overlay" id="shareModal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Отправить список на e-mail</h2>
+      <button class="modal-close" data-action="close-share"><i class="fa-solid fa-times"></i></button>
+    </div>
+    <div class="setting-item" style="flex-direction: column; align-items: stretch; gap: 10px; border-bottom: none;">
+      <span class="setting-label">Получатель (e-mail)</span>
+      <input type="email" class="input-text" id="shareEmailInput" placeholder="name@example.com">
+      <span class="setting-label">Тема письма</span>
+      <input type="text" class="input-text" id="shareSubjectInput" maxlength="120">
+      <span class="setting-label">Текст письма (можно поправить перед отправкой)</span>
+      <textarea class="input-text" id="shareBodyInput" rows="12" style="min-height: 220px;"></textarea>
+    </div>
+    <div class="note-modal-footer">
+      <button class="btn-cancel" data-action="cancel-share">Отмена</button>
+      <button class="btn-save" data-action="send-share"><i class="fa-regular fa-paper-plane"></i> Отправить</button>
+    </div>
+  </div>
+</div>
+<div class="toast-container" id="toastContainer"></div>
+</body>
+</html>
