@@ -6,3 +6,8 @@ desktop.ini
 # Прочее
 *.log
 .DS_Store
+
+# Секреты
+ssh.txt
+*.key
+id_rsa*
