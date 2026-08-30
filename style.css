@@ -444,6 +444,8 @@ body[data-theme="light"] .subtask { background: rgba(0, 0, 0, 0.041); }
 .share-btn i { font-size: 13px; }
 /* Аккаунт и синхронизация в настройках */
 .sync-section { flex-direction: column; align-items: stretch; gap: 10px; }
+.sync-account { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--fg); }
+.sync-account i { color: var(--accent); font-size: 14px; }
 .sync-row { display: flex; gap: 8px; }
 .sync-row .input-text { padding: 10px 12px; font-size: 13px; }
 .sync-status { font-size: 12px; color: var(--muted); }

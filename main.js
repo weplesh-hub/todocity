@@ -2122,10 +2122,10 @@ function updateSyncUI() {
   const lastSync = Number(localStorage.getItem(SYNCED_AT_KEY) || 0);
   if (syncToken && syncLoginName) {
     box.innerHTML = `
-      <div class="sync-status">Вошли как <b>${escapeHtml(syncLoginName)}</b>${lastSync ? ' · ' + syncTimeText(lastSync) : ''}</div>
+      <div class="sync-account"><i class="fa-regular fa-user"></i><span>${escapeHtml(syncLoginName)}</span></div>
+      <div class="sync-status">${lastSync ? syncTimeText(lastSync) : 'ещё не синхронизировано'}</div>
       <div class="sync-actions">
-        <button class="mini-btn mini-btn-save" data-action="sync-pull">Загрузить с сервера</button>
-        <button class="mini-btn mini-btn-save" data-action="sync-push">Отправить на сервер</button>
+        <button class="mini-btn mini-btn-save" data-action="sync-now">Синхронизировать</button>
         <button class="mini-btn mini-btn-cancel" data-action="sync-logout">Выйти</button>
       </div>`;
   } else {
@@ -2214,6 +2214,18 @@ async function doSyncAuth(kind) {
     const pulled = await syncPull({ silent: true }).catch(() => false);
     if (!pulled) await syncPush({ silent: true }).catch(() => {});
     updateSyncUI();
+  } catch (e) {
+    toast(e.message, 'danger');
+  }
+}
+
+// Одна кнопка: сервер новее — забираем его, иначе — отправляем локальное
+async function doSyncNow() {
+  if (!syncToken) return;
+  try {
+    const pulled = await syncPull({ silent: true });
+    if (!pulled) await syncPush({ silent: true });
+    toast('Синхронизировано', 'success');
   } catch (e) {
     toast(e.message, 'danger');
   }
@@ -2313,8 +2325,7 @@ document.addEventListener('click', (e) => {
     case 'sync-login': doSyncAuth('login'); break;
     case 'sync-register': doSyncAuth('register'); break;
     case 'sync-logout': doSyncLogout(); break;
-    case 'sync-pull': syncPull().catch(e => toast(e.message, 'danger')); break;
-    case 'sync-push': syncPush().catch(e => toast(e.message, 'danger')); break;
+    case 'sync-now': doSyncNow(); break;
     case 'open-share': openShareModal(); break;
     case 'close-share': closeShareModal(); break;
     case 'cancel-share': closeShareModal(); break;
