@@ -14,3 +14,8 @@ id_rsa*
 
 # локальные артефакты бэкенда
 data.db
+
+# python/sqlite артефакты
+__pycache__/
+*.pyc
+data.db*
