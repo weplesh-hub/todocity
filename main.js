@@ -2089,11 +2089,20 @@ async function apiCall(method, path, body) {
   const headers = {};
   if (syncToken) headers['Authorization'] = 'Bearer ' + syncToken;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  const res = await fetch(API_BASE + path, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined
-  });
+  let res;
+  try {
+    res = await fetch(API_BASE + path, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined
+    });
+  } catch (e) {
+    // Сеть недоступна: сервер выключен либо смешанный контент — HTTPS-страница
+    // (GitHub Pages) не может обращаться к HTTP-API
+    let msg = 'Нет связи с сервером синхронизации';
+    if (location.protocol === 'https:') msg += '. С HTTPS-страницы (GitHub Pages) синхронизация недоступна — откройте http://104.171.138.209';
+    throw new Error(msg);
+  }
   let data = {};
   try { data = await res.json(); } catch (e) { /* пустое тело */ }
   if (res.status === 401 && syncToken) handleUnauthorized();
