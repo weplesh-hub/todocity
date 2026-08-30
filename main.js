@@ -246,23 +246,29 @@ function isTaskVisibleToday(task) {
   return nextDate.getTime() === today.getTime();
 }
 // ===== LOCALSTORAGE =====
+// Снимок состояния — единый и для localStorage, и для отправки на сервер
+function getStateSnapshot() {
+  return {
+    tasks: state.tasks,
+    groups: state.groups,
+    tags: state.tags,
+    systemListsConfig: state.systemListsConfig,
+    listVisibility: state.listVisibility,
+    dealOfDayId: state.dealOfDayId,
+    activeTimer: { ...state.activeTimer, running: false },
+    sidebarCollapsed: state.sidebarCollapsed,
+    doneExpanded: state.doneExpanded,
+    theme: state.theme,
+    shareEmail: state.shareEmail,
+    seeded: true
+  };
+}
+
 function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      tasks: state.tasks,
-      groups: state.groups,
-      tags: state.tags,
-      systemListsConfig: state.systemListsConfig,
-      listVisibility: state.listVisibility,
-      dealOfDayId: state.dealOfDayId,
-      activeTimer: { ...state.activeTimer, running: false },
-      sidebarCollapsed: state.sidebarCollapsed,
-      doneExpanded: state.doneExpanded,
-      theme: state.theme,
-      shareEmail: state.shareEmail,
-      seeded: true
-    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(getStateSnapshot()));
   } catch(e) { console.warn('Не удалось сохранить', e); }
+  schedulePush();
 }
 
 function loadState() {
@@ -1244,9 +1250,10 @@ function applyTheme() {
   saveState();
 }
 
-function openSettings() { 
+function openSettings() {
   renderVisibilityList();
-  document.getElementById('settingsModal').style.display = 'flex'; 
+  updateSyncUI();
+  document.getElementById('settingsModal').style.display = 'flex';
 }
 
 function renderVisibilityList() {
@@ -2068,6 +2075,160 @@ function showAddSubtaskUI(taskId) {
   });
 }
 
+// ===== АККАУНТ И СИНХРОНИЗАЦИЯ =====
+const TOKEN_KEY = 'todo-app-v47-token';
+const LOGIN_KEY = 'todo-app-v47-login';
+const SYNCED_AT_KEY = 'todo-app-v47-synced-at';
+const API_BASE = (location.host === '104.171.138.209') ? '/api' : 'http://104.171.138.209/api';
+let syncToken = localStorage.getItem(TOKEN_KEY) || null;
+let syncLoginName = localStorage.getItem(LOGIN_KEY) || '';
+let pushTimer = null;
+let syncing = false; // защита от цикла: pull -> saveState -> push
+
+async function apiCall(method, path, body) {
+  const headers = {};
+  if (syncToken) headers['Authorization'] = 'Bearer ' + syncToken;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  const res = await fetch(API_BASE + path, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* пустое тело */ }
+  if (res.status === 401 && syncToken) handleUnauthorized();
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function handleUnauthorized() {
+  syncToken = null;
+  syncLoginName = '';
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(LOGIN_KEY);
+  updateSyncUI();
+  toast('Сессия истекла — войдите заново', 'danger');
+}
+
+function syncTimeText(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `синхронизировано в ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function updateSyncUI() {
+  const box = document.getElementById('syncBox');
+  if (!box) return;
+  const lastSync = Number(localStorage.getItem(SYNCED_AT_KEY) || 0);
+  if (syncToken && syncLoginName) {
+    box.innerHTML = `
+      <div class="sync-status">Вошли как <b>${escapeHtml(syncLoginName)}</b>${lastSync ? ' · ' + syncTimeText(lastSync) : ''}</div>
+      <div class="sync-actions">
+        <button class="mini-btn mini-btn-save" data-action="sync-pull">Загрузить с сервера</button>
+        <button class="mini-btn mini-btn-save" data-action="sync-push">Отправить на сервер</button>
+        <button class="mini-btn mini-btn-cancel" data-action="sync-logout">Выйти</button>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="sync-row">
+        <input type="text" id="syncLoginInput" class="input-text" placeholder="Логин (латиница, 3–32)" autocomplete="username" maxlength="32">
+        <input type="password" id="syncPassInput" class="input-text" placeholder="Пароль (минимум 6)" autocomplete="current-password">
+      </div>
+      <div class="sync-actions">
+        <button class="mini-btn mini-btn-save" data-action="sync-login">Войти</button>
+        <button class="mini-btn mini-btn-cancel" data-action="sync-register">Создать аккаунт</button>
+      </div>`;
+  }
+}
+
+// Автоотправка изменений с задержкой после каждого сохранения
+function schedulePush() {
+  if (!syncToken || syncing) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { syncPush({ silent: true }).catch(() => {}); }, 1200);
+}
+
+async function syncPush(opts = {}) {
+  if (!syncToken) return;
+  const res = await apiCall('PUT', '/state', getStateSnapshot());
+  localStorage.setItem(SYNCED_AT_KEY, String(res.updated_at || Date.now()));
+  if (!opts.silent) toast('Состояние отправлено на сервер', 'success');
+  updateSyncUI();
+}
+
+// Загружаем состояние с сервера, только если оно новее нашей последней синхронизации
+// (чтобы не затирать локальные правки, сделанные офлайн этим же устройством)
+async function syncPull(opts = {}) {
+  if (!syncToken) return false;
+  const data = await apiCall('GET', '/state');
+  const lastLocalSync = Number(localStorage.getItem(SYNCED_AT_KEY) || 0);
+  if (data.state && data.updated_at && data.updated_at > lastLocalSync + 1000) {
+    applyServerState(data.state);
+    localStorage.setItem(SYNCED_AT_KEY, String(data.updated_at));
+    if (!opts.silent) toast('Данные загружены с сервера', 'success');
+    updateSyncUI();
+    return true;
+  }
+  if (!opts.silent) {
+    toast(data.state ? 'Локальные данные не старше серверных' : 'На сервере пусто — нечего загружать', 'info');
+  }
+  return false;
+}
+
+function applyServerState(srv) {
+  if (!srv || typeof srv !== 'object') return;
+  syncing = true;
+  try {
+    state.tasks = srv.tasks || [];
+    state.groups = srv.groups || [];
+    state.tags = srv.tags || [];
+    if (srv.systemListsConfig) state.systemListsConfig = { ...state.systemListsConfig, ...srv.systemListsConfig };
+    state.listVisibility = srv.listVisibility || state.listVisibility;
+    state.dealOfDayId = srv.dealOfDayId || null;
+    state.sidebarCollapsed = !!srv.sidebarCollapsed;
+    state.doneExpanded = !!srv.doneExpanded;
+    state.theme = srv.theme || 'dark';
+    state.shareEmail = srv.shareEmail || '';
+    applyTheme();
+    applySidebarState();
+    render();
+  } finally {
+    syncing = false;
+  }
+}
+
+async function doSyncAuth(kind) {
+  const loginEl = document.getElementById('syncLoginInput');
+  const passEl = document.getElementById('syncPassInput');
+  const login = loginEl ? loginEl.value.trim() : '';
+  const password = passEl ? passEl.value : '';
+  if (!login || !password) { toast('Введите логин и пароль', 'danger'); return; }
+  try {
+    const res = await apiCall('POST', kind === 'register' ? '/register' : '/login', { login, password });
+    syncToken = res.token;
+    syncLoginName = res.login;
+    localStorage.setItem(TOKEN_KEY, syncToken);
+    localStorage.setItem(LOGIN_KEY, syncLoginName);
+    toast(kind === 'register' ? 'Аккаунт создан' : 'Вы вошли', 'success');
+    // первый вход: сервер новее — тянем его; сервер пуст/старее — поднимаем туда локальные данные
+    const pulled = await syncPull({ silent: true }).catch(() => false);
+    if (!pulled) await syncPush({ silent: true }).catch(() => {});
+    updateSyncUI();
+  } catch (e) {
+    toast(e.message, 'danger');
+  }
+}
+
+async function doSyncLogout() {
+  try { await apiCall('POST', '/logout'); } catch (e) { /* даже если не вышло — разлогиниваемся локально */ }
+  syncToken = null;
+  syncLoginName = '';
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(LOGIN_KEY);
+  updateSyncUI();
+  toast('Вы вышли из аккаунта', 'info');
+}
+
 // ===== ДЕЛЕГИРОВАНИЕ СОБЫТИЙ =====
 document.addEventListener('click', (e) => {
   if (e.target.matches('#settingsModal.modal-overlay')) { closeSettings(); return; }
@@ -2149,6 +2310,11 @@ document.addEventListener('click', (e) => {
   switch(type) {
     case 'open-settings': openSettings(); break;
     case 'close-settings': closeSettings(); break;
+    case 'sync-login': doSyncAuth('login'); break;
+    case 'sync-register': doSyncAuth('register'); break;
+    case 'sync-logout': doSyncLogout(); break;
+    case 'sync-pull': syncPull().catch(e => toast(e.message, 'danger')); break;
+    case 'sync-push': syncPush().catch(e => toast(e.message, 'danger')); break;
     case 'open-share': openShareModal(); break;
     case 'close-share': closeShareModal(); break;
     case 'cancel-share': closeShareModal(); break;
@@ -2651,8 +2817,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 // ===== СТАРТ =====
 loadState();
-applyTheme(); 
+applyTheme();
 updateDate();
 render();
 applySidebarState();
+// если есть сохранённая сессия — подтягиваем свежие данные с сервера (если сервер новее)
+if (syncToken) {
+  syncPull({ silent: true }).catch(() => {});
+}
 setInterval(updateDate, 60000);
