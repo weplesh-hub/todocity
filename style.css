@@ -162,6 +162,7 @@ body.timeline-open .app { margin-right: 420px; }
   white-space: nowrap;
 }
 .settings-btn { padding: 10px 12px; }
+#syncNowBtn.logged-out { opacity: 0.55; }
 .sidebar-toggle-btn:hover, .settings-btn:hover { background: var(--bg-card-hover); color: var(--accent); border-color: var(--accent); }
 .sidebar-toggle-btn i, .settings-btn i { font-size: 13px; }
 

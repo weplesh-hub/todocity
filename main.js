@@ -2118,6 +2118,8 @@ function syncTimeText(ts) {
 
 function updateSyncUI() {
   const box = document.getElementById('syncBox');
+  const toolbarBtn = document.getElementById('syncNowBtn');
+  if (toolbarBtn) toolbarBtn.classList.toggle('logged-out', !(syncToken && syncLoginName));
   if (!box) return;
   const lastSync = Number(localStorage.getItem(SYNCED_AT_KEY) || 0);
   if (syncToken && syncLoginName) {
@@ -2231,6 +2233,23 @@ async function doSyncNow() {
   }
 }
 
+// Кнопка синхронизации в верхней панели: вошли — синхронизируем (иконка крутится),
+// не вошли — приглашаем войти в настройках
+async function doSyncToolbar() {
+  if (!syncToken) {
+    toast('Войдите в аккаунт в настройках', 'info');
+    openSettings();
+    return;
+  }
+  const icon = document.querySelector('#syncNowBtn i');
+  if (icon) icon.classList.add('fa-spin');
+  try {
+    await doSyncNow();
+  } finally {
+    if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 500);
+  }
+}
+
 async function doSyncLogout() {
   try { await apiCall('POST', '/logout'); } catch (e) { /* даже если не вышло — разлогиниваемся локально */ }
   syncToken = null;
@@ -2326,6 +2345,7 @@ document.addEventListener('click', (e) => {
     case 'sync-register': doSyncAuth('register'); break;
     case 'sync-logout': doSyncLogout(); break;
     case 'sync-now': doSyncNow(); break;
+    case 'sync-toolbar': doSyncToolbar(); break;
     case 'open-share': openShareModal(); break;
     case 'close-share': closeShareModal(); break;
     case 'cancel-share': closeShareModal(); break;
@@ -2832,6 +2852,7 @@ applyTheme();
 updateDate();
 render();
 applySidebarState();
+updateSyncUI();
 // если есть сохранённая сессия — подтягиваем свежие данные с сервера (если сервер новее)
 if (syncToken) {
   syncPull({ silent: true }).catch(() => {});
