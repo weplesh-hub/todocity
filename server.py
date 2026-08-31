@@ -54,6 +54,16 @@ def init_db():
             user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
             data TEXT,
             updated_at INTEGER)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS sessions (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            ts INTEGER NOT NULL)''')
+        # миграция на мульти-сессии: старый единственный токен переносим в sessions
+        for row in c.execute(
+                "SELECT id, token, token_ts FROM users WHERE token IS NOT NULL AND token != ''").fetchall():
+            c.execute('INSERT OR IGNORE INTO sessions (token, user_id, ts) VALUES (?, ?, ?)',
+                      (row['token'], row['id'], row['token_ts'] or 0))
+        c.execute('UPDATE users SET token = NULL, token_ts = 0')
 
 
 def hash_password(pw, salt=None):
@@ -71,22 +81,27 @@ def check_password(pw, stored):
 
 
 def issue_token(user_id):
+    # каждая авторизация — отдельная сессия, вход на новом устройстве
+    # не выкидывает уже вошедшие
     token = secrets.token_hex(32)
     now = int(time.time() * 1000)
     with db() as c:
-        c.execute('UPDATE users SET token = ?, token_ts = ? WHERE id = ?', (token, now, user_id))
+        c.execute('INSERT INTO sessions (token, user_id, ts) VALUES (?, ?, ?)', (token, user_id, now))
     return token
 
 
 def user_by_token(token):
     now = int(time.time() * 1000)
     with db() as c:
-        row = c.execute('SELECT id, login, token_ts FROM users WHERE token = ?', (token,)).fetchone()
-    if not row or now - row['token_ts'] > TOKEN_TTL_MS:
-        return None
-    # скользящее продление сессии
-    with db() as c:
-        c.execute('UPDATE users SET token_ts = ? WHERE id = ?', (now, row['id']))
+        row = c.execute('''SELECT s.ts, u.id, u.login FROM sessions s
+                           JOIN users u ON u.id = s.user_id WHERE s.token = ?''', (token,)).fetchone()
+        if not row:
+            return None
+        if now - row['ts'] > TOKEN_TTL_MS:
+            c.execute('DELETE FROM sessions WHERE token = ?', (token,))
+            return None
+        # скользящее продление сессии
+        c.execute('UPDATE sessions SET ts = ? WHERE token = ?', (now, token))
     return {'id': row['id'], 'login': row['login']}
 
 
@@ -215,10 +230,11 @@ class ApiHandler(BaseHTTPRequestHandler):
             return self.send_json(200, {'token': issue_token(row['id']), 'login': login})
 
         if self.path == '/api/logout':
-            user = self.auth_user()
-            if user:
+            # закрываем только текущую сессию, другие устройства остаются в системе
+            header = self.headers.get('Authorization', '')
+            if header.startswith('Bearer '):
                 with db() as c:
-                    c.execute('UPDATE users SET token = NULL, token_ts = 0 WHERE id = ?', (user['id'],))
+                    c.execute('DELETE FROM sessions WHERE token = ?', (header[7:].strip(),))
             return self.send_json(200, {'ok': True})
 
         return self.send_json(404, {'error': 'not found'})

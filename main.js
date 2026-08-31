@@ -2265,8 +2265,10 @@ async function doSyncLogout() {
   syncLoginName = '';
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(LOGIN_KEY);
-  updateSyncUI();
-  toast('Вы вышли из аккаунта', 'info');
+  localStorage.removeItem(SYNCED_AT_KEY);
+  // локальные данные принадлежат аккаунту — не оставляем их на устройстве без авторизации
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
 }
 
 // ===== ДЕЛЕГИРОВАНИЕ СОБЫТИЙ =====
