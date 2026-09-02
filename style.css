@@ -84,20 +84,20 @@ body.timeline-open .app { margin-right: 420px; }
 .date-block { position: relative; display: flex; flex-direction: column; gap: 6px; }
 .date-label { font-size: 11px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .date-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; container-type: inline-size; }
-.date-text { display: flex; align-items: baseline; gap: 14px; flex: 1 1 auto; min-width: 0; white-space: nowrap; }
+.date-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; white-space: nowrap; }
 .date-day { font-family: 'Unbounded', sans-serif; font-size: 88px; font-weight: 900; line-height: 0.85; background: linear-gradient(135deg, var(--fg) 0%, var(--accent) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -0.04em; }
 .date-month { font-family: 'Unbounded', sans-serif; font-size: 24px; font-weight: 400; color: var(--fg-dim); }
+.date-actions { display: flex; gap: 8px; }
 /* дата подстраивается под фактическую ширину блока, кнопки не сжимаются */
-@container (max-width: 340px) { .date-day { font-size: 76px; } .date-month { font-size: 21px; } }
-@container (max-width: 300px) { .date-day { font-size: 64px; } .date-month { font-size: 18px; } }
-@container (max-width: 260px) { .date-day { font-size: 54px; } .date-month { font-size: 16px; } }
+@container (max-width: 340px) { .date-day { font-size: 64px; } .date-month { font-size: 18px; } }
+@container (max-width: 300px) { .date-day { font-size: 54px; } .date-month { font-size: 16px; } .calendar-toggle-btn { width: 30px; height: 30px; flex-basis: 30px; font-size: 13px; border-radius: 9px; } }
 .date-weekday { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
 .calendar-toggle-btn {
-  margin-bottom: 8px; width: 44px; height: 44px; flex: 0 0 44px;
+  margin-bottom: 4px; width: 38px; height: 38px; flex: 0 0 38px;
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: 12px; color: var(--fg-dim); cursor: pointer;
-  font-size: 18px; display: flex; align-items: center; justify-content: center;
+  border-radius: 11px; color: var(--fg-dim); cursor: pointer;
+  font-size: 15px; display: flex; align-items: center; justify-content: center;
   transition: all 0.2s;
 }
 .calendar-toggle-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,107,74,0.1); }

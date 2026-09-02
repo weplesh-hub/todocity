@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 <script src="main.js?v=29" defer></script>
 </head>
 <body>
@@ -25,12 +25,20 @@
           <div class="date-day" id="dateDay">--</div>
           <div class="date-month" id="dateMonth">---</div>
         </div>
-        <button class="calendar-toggle-btn" id="calToggle" aria-label="Открыть календарь">
-          <i class="fa-regular fa-calendar"></i>
-        </button>
-        <button class="calendar-toggle-btn" id="timelineToggle" aria-label="Почасовое расписание" title="Почасовое расписание">
-          <i class="fa-regular fa-clock"></i>
-        </button>
+        <div class="date-actions">
+          <button class="calendar-toggle-btn" id="calToggle" aria-label="Открыть календарь">
+            <i class="fa-regular fa-calendar"></i>
+          </button>
+          <button class="calendar-toggle-btn" id="timelineToggle" aria-label="Почасовое расписание" title="Почасовое расписание">
+            <i class="fa-regular fa-clock"></i>
+          </button>
+          <button class="calendar-toggle-btn" id="settingsBtn" data-action="open-settings" title="Настройки">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+          <button class="calendar-toggle-btn" id="syncNowBtn" data-action="sync-toolbar" title="Синхронизировать" aria-label="Синхронизировать">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
       </div>
       <div class="date-weekday" id="dateWeekday">---</div>
       <div class="calendar-popover" id="calendarPopover" style="display: none;"></div>
@@ -54,12 +62,6 @@
     <button id="toggleSidebarBtn" class="sidebar-toggle-btn" data-action="toggle-sidebar" title="Свернуть/Развернуть панель">
       <i class="fa-solid fa-chevron-left"></i>
       <span>Свернуть панель</span>
-    </button>
-    <button id="settingsBtn" class="settings-btn" data-action="open-settings" title="Настройки">
-      <i class="fa-solid fa-gear"></i>
-    </button>
-    <button id="syncNowBtn" class="settings-btn" data-action="sync-toolbar" title="Синхронизировать" aria-label="Синхронизировать">
-      <i class="fa-solid fa-arrows-rotate"></i>
     </button>
   </div>
 
