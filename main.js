@@ -528,9 +528,15 @@ function closeTimeline() {
 
 // ===== ПРОГРЕСС ДНЯ =====
 function updateProgress() {
+  // Процент — по задачам текущего дня (тот же состав, что и список «Сегодня»).
+  // Выполненная задача считается целиком (незакрытые подзадачи не занижают процент),
+  // у невыполненной учитываются её подзадачи.
+  const today = new Date();
   let total = 0, done = 0;
   state.tasks.forEach(t => {
-    total += 1; if (t.done) done += 1;
+    if (!isTaskOnDay(t, today)) return;
+    total += 1;
+    if (t.done) { done += 1; return; }
     t.subtasks.forEach(s => { total += 1; if (s.done) done += 1; });
   });
   const percent = total === 0 ? 0 : Math.round((done / total) * 100);
