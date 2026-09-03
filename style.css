@@ -448,13 +448,21 @@ body[data-theme="light"] .subtask { background: rgba(0, 0, 0, 0.041); }
 .share-btn { border-left: 1px solid var(--border); border-radius: 0 8px 8px 0; margin-left: 2px; padding: 8px 10px; }
 .share-btn i { font-size: 13px; }
 /* Аккаунт и синхронизация в настройках */
-.sync-section { flex-direction: column; align-items: stretch; gap: 10px; }
+/* специфичность выше .setting-item (align-items:center) — иначе содержимое центрируется */
+.setting-item.sync-section { flex-direction: column; align-items: stretch; gap: 10px; }
 .sync-account { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--fg); }
 .sync-account i { color: var(--accent); font-size: 14px; }
 .sync-row { display: flex; gap: 8px; }
 .sync-row .input-text { padding: 10px 12px; font-size: 13px; }
 .sync-status { font-size: 12px; color: var(--muted); }
+#syncBox { display: flex; flex-direction: column; gap: 10px; }
 .sync-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* кнопки синхронизации — в общей стилистике приложения (бордер + спокойный фон, как кнопки шапки) */
+.sync-actions .mini-btn { flex: 0 0 auto; padding: 9px 18px; border-radius: 10px; font-size: 12px; }
+.sync-actions .mini-btn-save { background: var(--bg-card); color: var(--fg); border-color: var(--border-strong); }
+.sync-actions .mini-btn-save:hover { color: var(--accent); border-color: var(--accent); background: rgba(255,107,74,0.1); filter: none; }
+.sync-actions .mini-btn-cancel { padding: 9px 14px; }
+.sync-actions .mini-btn-cancel:hover { color: var(--fg); background: var(--bg-card-hover); }
 .tasks-list { display: flex; flex-direction: column; gap: 12px; }
 .tasks-divider { display: flex; align-items: center; gap: 14px; margin: 16px 0 4px; color: var(--muted); font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; font-weight: 700; }
 .tasks-divider::before, .tasks-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
