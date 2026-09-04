@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=29">
-<script src="main.js?v=31" defer></script>
+<link rel="stylesheet" href="style.css?v=30">
+<script src="main.js?v=32" defer></script>
 </head>
 <body>
 <div class="app">
@@ -302,11 +302,14 @@
       <input type="email" class="input-text" id="shareEmailInput" placeholder="name@example.com">
       <span class="setting-label">Тема письма</span>
       <input type="text" class="input-text" id="shareSubjectInput" maxlength="120">
-      <span class="setting-label">Текст письма (можно поправить перед отправкой)</span>
-      <textarea class="input-text" id="shareBodyInput" rows="12" style="min-height: 220px;"></textarea>
+      <span class="setting-label">Предпросмотр письма</span>
+      <div id="sharePreview" class="share-preview"></div>
+      <span class="setting-label">Текстовая версия (отправится через почтовую программу, можно поправить)</span>
+      <textarea class="input-text" id="shareBodyInput" rows="8" style="min-height: 150px;"></textarea>
     </div>
     <div class="note-modal-footer">
       <button class="btn-cancel" data-action="cancel-share">Отмена</button>
+      <button class="btn-cancel" data-action="copy-share-html"><i class="fa-regular fa-copy"></i> Скопировать красивое письмо</button>
       <button class="btn-save" data-action="send-share"><i class="fa-regular fa-paper-plane"></i> Отправить</button>
     </div>
   </div>

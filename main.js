@@ -1311,50 +1311,149 @@ function renderVisibilityList() {
 function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
 
 // ===== ОТПРАВКА СПИСКА НА E-MAIL =====
+// Логотип для письма — абсолютный URL (в письме относительные пути не работают)
+const EMAIL_LOGO_URL = 'http://104.171.138.209/logo-todocity-email.png';
+const IMP_COLOR = { high: '#fb7185', medium: '#fbbf24', low: '#4ade80' };
+const IMP_MARK = { high: '▲', medium: '●', low: '▽' };
+let shareHtmlCache = '';
+
 function buildShareText() {
   const title = document.getElementById('tasksTitleText').textContent;
   const tasks = lastVisibleTasks;
   const dateStr = toLocalISODate(new Date()).split('-').reverse().join('.');
-  const taskLines = (t, i, out) => {
-    let s = `${i}. ${t.done ? '[x] ' : ''}${t.text}`;
+  const taskLines = (t, out) => {
     const bits = [];
     if (t.startTime) bits.push(t.startTime + (t.endTime ? '–' + t.endTime : ''));
-    if (t.importance && t.importance !== 'none') bits.push(IMPORTANCE_LABELS[t.importance].toLowerCase());
+    if (t.importance && t.importance !== 'none') bits.push(IMP_MARK[t.importance] + ' ' + IMPORTANCE_LABELS[t.importance].toLowerCase());
     const g = state.groups.find(x => x.id === t.groupId);
     if (g) bits.push(g.name);
-    if (t.id === state.dealOfDayId) bits.push('★ дело дня');
-    if (bits.length) s += `  (${bits.join(', ')})`;
-    out.push(s);
-    t.subtasks.forEach(sub => {
-      out.push(`    ${sub.done ? '[x]' : '[ ]'} ${sub.text}`);
-    });
+    const isDeal = t.id === state.dealOfDayId;
+    out.push(`${isDeal ? '★ ' : ''}${t.done ? '✓ ' : ''}${t.text}${bits.length ? `  (${bits.join(', ')})` : ''}`);
+    t.subtasks.forEach(sub => out.push(`     ${sub.done ? '✓' : '○'} ${sub.text}`));
   };
-  const lines = [`TODOCITY · ${title} · ${dateStr}`, ''];
-  const active = tasks.filter(t => !t.done);
+  const lines = ['✦ TODOCITY — ' + title, '   ' + dateStr, '──────────────────────────────'];
+  const active = tasks.filter(t => !t.done && t.id !== state.dealOfDayId);
   const done = tasks.filter(t => t.done);
+  const deal = tasks.find(t => t.id === state.dealOfDayId && !t.done);
+  if (deal) { lines.push('ДЕЛО ДНЯ'); taskLines(deal, lines); lines.push(''); }
   if (active.length) {
-    lines.push(`Активные (${active.length}):`);
-    active.forEach((t, i) => taskLines(t, i + 1, lines));
+    lines.push(`АКТИВНЫЕ (${active.length}):`);
+    active.forEach(t => taskLines(t, lines));
     lines.push('');
   }
   if (done.length) {
-    lines.push(`Выполнено (${done.length}):`);
-    done.forEach((t, i) => taskLines(t, i + 1, lines));
+    lines.push(`ВЫПОЛНЕНО (${done.length}):`);
+    done.forEach(t => taskLines(t, lines));
     lines.push('');
   }
-  if (!tasks.length) lines.push('Дел нет — всё сделано!');
+  if (!tasks.length) lines.push('Дел нет — всё сделано! ✦');
+  lines.push('──────────────────────────────', 'Отправлено из TODOCITY');
   return lines.join('\n');
+}
+
+// Карточка задачи для HTML-письма (все стили инлайн — требование почтовых клиентов)
+function shareCardHtml(t, numbering) {
+  const isDeal = t.id === state.dealOfDayId;
+  const g = state.groups.find(x => x.id === t.groupId);
+  const bits = [];
+  if (t.startTime) bits.push(`<span style="color:#2dd4bf;font-weight:bold;">${t.startTime}${t.endTime ? '–' + t.endTime : ''}</span>`);
+  if (t.importance && t.importance !== 'none') bits.push(`<span style="color:${IMP_COLOR[t.importance]};">${IMP_MARK[t.importance]} ${IMPORTANCE_LABELS[t.importance].toLowerCase()}</span>`);
+  if (g) bits.push(`<span style="color:#6f7872;">${escapeHtml(g.name)}</span>`);
+  const meta = bits.length ? `<span style="font-size:12px;"> &nbsp;·&nbsp; ${bits.join(' &nbsp;·&nbsp; ')}</span>` : '';
+  const subs = t.subtasks.map(s => `
+      <div style="margin:4px 0 0 26px;font-size:13px;color:${s.done ? '#6f7872' : '#c7c0b3'};">
+        <span style="color:${s.done ? '#4ade80' : '#6f7872'};">${s.done ? '✔' : '○'}</span>&nbsp; ${s.done ? `<s>${escapeHtml(s.text)}</s>` : escapeHtml(s.text)}
+      </div>`).join('');
+  return `
+    <div style="margin:0 0 8px 0;padding:11px 14px;background:${isDeal ? '#241710' : '#191e1c'};border-radius:10px;${isDeal ? 'border-left:3px solid #ff6b4a;' : ''}">
+      <div style="font-size:15px;line-height:1.45;color:${t.done ? '#6f7872' : '#f5f1e8'};${t.done ? 'text-decoration:line-through;' : ''}">
+        ${isDeal ? '<span style="color:#ff6b4a;">★ </span>' : ''}${numbering ? '' : ''}${escapeHtml(t.text)}${meta}
+      </div>${subs}
+    </div>`;
+}
+
+// Красивое HTML-письмо в стилистике приложения (логотип, фирменные цвета)
+function buildShareHtml() {
+  const title = document.getElementById('tasksTitleText').textContent;
+  const tasks = lastVisibleTasks;
+  const dateStr = toLocalISODate(new Date()).split('-').reverse().join('.');
+  const active = tasks.filter(t => !t.done);
+  const done = tasks.filter(t => t.done);
+  const stats = tasks.length
+    ? `<span style="color:#4ade80;font-weight:bold;">${done.length}</span><span style="color:#6f7872;"> / ${tasks.length} выполнено</span>`
+    : '';
+  const activeHtml = active.length
+    ? `<div style="margin:22px 0 10px;font-size:11px;letter-spacing:2px;color:#6f7872;font-weight:bold;">АКТИВНЫЕ · ${active.length}</div>` +
+      active.map(t => shareCardHtml(t, true)).join('')
+    : '';
+  const doneHtml = done.length
+    ? `<div style="margin:22px 0 10px;font-size:11px;letter-spacing:2px;color:#6f7872;font-weight:bold;">ВЫПОЛНЕНО · ${done.length}</div>` +
+      done.map(t => shareCardHtml(t, false)).join('')
+    : '';
+  const emptyHtml = tasks.length ? '' :
+    `<div style="padding:36px 0;text-align:center;color:#c7c0b3;font-size:15px;">Дел нет — всё сделано! ✦</div>`;
+  const inner = `
+  <div style="background:#0a0e0c;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:560px;margin:0 auto;background:#131816;border:1px solid #232a27;border-radius:16px;overflow:hidden;">
+      <div style="padding:26px 28px 18px;background:#0a0e0c;">
+        <img src="${EMAIL_LOGO_URL}" width="246" alt="TODOCITY" style="display:block;border:0;">
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #232a27;font-size:13px;color:#c7c0b3;">
+          <span style="color:#ff6b4a;font-weight:bold;">${escapeHtml(title)}</span> &nbsp;·&nbsp; ${dateStr} &nbsp;·&nbsp; ${stats}
+        </div>
+      </div>
+      <div style="padding:6px 20px 8px;">
+        ${emptyHtml}${activeHtml}${doneHtml}
+      </div>
+      <div style="padding:16px 28px;background:#0a0e0c;border-top:1px solid #232a27;font-size:11px;color:#6f7872;">
+        Отправлено из TODOCITY — планировщика дел · <a href="http://104.171.138.209" style="color:#ff6b4a;text-decoration:none;">todocity</a>
+      </div>
+    </div>
+  </div>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body style="margin:0;padding:0;">${inner}</body></html>`;
 }
 
 function openShareModal() {
   document.getElementById('shareSubjectInput').value = `TODOCITY: ${document.getElementById('tasksTitleText').textContent}`;
   document.getElementById('shareBodyInput').value = buildShareText();
+  shareHtmlCache = buildShareHtml();
+  const prev = document.getElementById('sharePreview');
+  if (prev) prev.innerHTML = shareHtmlCache.replace(/^<!DOCTYPE html>.*?<body[^>]*>/is, '').replace(/<\/body>.*$/is, '');
   document.getElementById('shareEmailInput').value = state.shareEmail || '';
   document.getElementById('shareModal').style.display = 'flex';
   setTimeout(() => document.getElementById('shareEmailInput')?.focus(), 50);
 }
 function closeShareModal() {
   document.getElementById('shareModal').style.display = 'none';
+}
+// Копирование красивой HTML-версии — для вставки в Gmail/Outlook (Ctrl+V)
+async function copyShareHtml() {
+  if (!shareHtmlCache) shareHtmlCache = buildShareHtml();
+  const text = document.getElementById('shareBodyInput').value;
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([shareHtmlCache], { type: 'text/html' }),
+        'text/plain': new Blob([text], { type: 'text/plain' })
+      })]);
+      toast('Красивое письмо скопировано — вставьте в письмо (Ctrl+V)', 'success');
+      return;
+    }
+  } catch (e) { /* ниже — запасной способ */ }
+  // Запасной способ: временный редактируемый блок с содержимым письма
+  const tmp = document.createElement('div');
+  tmp.contentEditable = 'true';
+  tmp.style.cssText = 'position:fixed;left:-9999px;top:0;width:560px;';
+  tmp.innerHTML = shareHtmlCache;
+  document.body.appendChild(tmp);
+  const range = document.createRange();
+  range.selectNodeContents(tmp);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  const ok = document.execCommand('copy');
+  sel.removeAllRanges();
+  tmp.remove();
+  toast(ok ? 'Красивое письмо скопировано — вставьте в письмо (Ctrl+V)' : 'Не удалось скопировать', ok ? 'success' : 'danger');
 }
 function sendShare() {
   const email = document.getElementById('shareEmailInput').value.trim();
@@ -2382,6 +2481,7 @@ document.addEventListener('click', (e) => {
     case 'sync-now': doSyncNow(); break;
     case 'sync-toolbar': doSyncToolbar(); break;
     case 'open-share': openShareModal(); break;
+    case 'copy-share-html': copyShareHtml(); break;
     case 'close-share': closeShareModal(); break;
     case 'cancel-share': closeShareModal(); break;
     case 'send-share': sendShare(); break;
