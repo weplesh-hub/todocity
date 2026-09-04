@@ -692,9 +692,17 @@ body[data-theme="light"] input[type="time"].edit-input { color-scheme: light; }
 .modal-title { font-family: 'Unbounded', sans-serif; font-size: 18px; font-weight: 700; }
 .modal-close { background: transparent; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: all 0.15s; }
 .modal-close:hover { color: var(--fg); background: var(--bg-card-hover); }
-.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); gap: 16px; }
 .setting-item:last-child { border-bottom: none; }
 .setting-label { font-size: 14px; font-weight: 600; color: var(--fg-dim); }
+/* Переключатель-чекбокс в настройках */
+.setting-check { display: inline-flex; align-items: center; cursor: pointer; flex: 0 0 auto; }
+.setting-check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.setting-check .switch { width: 44px; height: 24px; border-radius: 999px; background: var(--bg-input); border: 1px solid var(--border); position: relative; transition: all 0.2s; }
+.setting-check .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--muted); transition: all 0.2s; }
+.setting-check input:checked + .switch { background: rgba(255,107,74,0.22); border-color: var(--accent); }
+.setting-check input:checked + .switch::after { left: 22px; background: var(--accent); }
+.setting-check input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
 .theme-switcher { display: flex; gap: 4px; background: var(--bg-input); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
 .theme-btn { background: transparent; border: none; color: var(--muted); padding: 8px 16px; border-radius: 7px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
 .theme-btn:hover { color: var(--fg); }

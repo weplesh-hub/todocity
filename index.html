@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="style.css?v=28">
-<script src="main.js?v=30" defer></script>
+<link rel="stylesheet" href="style.css?v=29">
+<script src="main.js?v=31" defer></script>
 </head>
 <body>
 <div class="app">
@@ -218,6 +218,12 @@
         <button class="theme-btn active" data-theme-val="dark"><i class="fa-solid fa-moon"></i>Тёмная</button>
         <button class="theme-btn" data-theme-val="light"><i class="fa-solid fa-sun"></i>Светлая</button>
       </div>
+    </div>
+    <div class="setting-item">
+      <span class="setting-label">Автоформатирование списка дел на день</span>
+      <label class="setting-check" title="Дело дня → повторяющиеся → по приоритету; без приоритета — в конце">
+        <input type="checkbox" id="autoFormatCheck"><span class="switch"></span>
+      </label>
     </div>
     <div class="setting-item sync-section">
       <span class="setting-label">Аккаунт и синхронизация</span>

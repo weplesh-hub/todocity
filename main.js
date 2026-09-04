@@ -49,7 +49,8 @@ let state = {
   editingSystemListId: null,
   sidebarCollapsed: false,
   theme: 'dark',
-  shareEmail: ''
+  shareEmail: '',
+  autoFormatDay: false
 };
 
 let timerInterval = null;
@@ -260,6 +261,7 @@ function getStateSnapshot() {
     doneExpanded: state.doneExpanded,
     theme: state.theme,
     shareEmail: state.shareEmail,
+    autoFormatDay: state.autoFormatDay,
     seeded: true
   };
 }
@@ -294,6 +296,7 @@ function loadState() {
       state.doneExpanded = parsed.doneExpanded || false;
       state.theme = parsed.theme || 'dark';
       state.shareEmail = parsed.shareEmail || '';
+      state.autoFormatDay = !!parsed.autoFormatDay;
       if (state.tasks.length === 0 && state.groups.length === 0 && !parsed.seeded) seedDemo();
     } else { seedDemo(); }
   } catch(e) { console.warn('Не удалось загрузить', e); seedDemo(); }
@@ -962,6 +965,17 @@ function subtaskHTML(s, taskId, color) {
     </div>`;
 }
 
+// Автоформатирование дня: дело дня выводится первым (это уже делает renderTasks),
+// далее повторяющиеся дела, затем остальные по приоритету; без приоритета — в конце
+const IMP_ORDER = { high: 0, medium: 1, low: 2 };
+function autoFormatTasks(arr) {
+  return [...arr].sort((a, b) => {
+    const aRep = a.repeat ? 0 : 1, bRep = b.repeat ? 0 : 1;
+    if (aRep !== bRep) return aRep - bRep;
+    return (IMP_ORDER[a.importance] ?? 3) - (IMP_ORDER[b.importance] ?? 3);
+  });
+}
+
 function renderTasks() {
   const list = document.getElementById('tasksList');
   const titleEl = document.getElementById('tasksTitleText');
@@ -1074,6 +1088,7 @@ function renderTasks() {
   } else {
     const dealTask = tasks.find(t => t.id === state.dealOfDayId && !t.done);
     let activeTasks = tasks.filter(t => !t.done && t.id !== state.dealOfDayId);
+    if (state.autoFormatDay) activeTasks = autoFormatTasks(activeTasks);
     let doneTasks = tasks.filter(t => t.done);
 
     if (state.filter === 'active') {
@@ -1259,6 +1274,8 @@ function applyTheme() {
 function openSettings() {
   renderVisibilityList();
   updateSyncUI();
+  const af = document.getElementById('autoFormatCheck');
+  if (af) af.checked = !!state.autoFormatDay;
   document.getElementById('settingsModal').style.display = 'flex';
 }
 
@@ -2206,6 +2223,7 @@ function applyServerState(srv) {
     state.doneExpanded = !!srv.doneExpanded;
     state.theme = srv.theme || 'dark';
     state.shareEmail = srv.shareEmail || '';
+    state.autoFormatDay = !!srv.autoFormatDay;
     applyTheme();
     applySidebarState();
     render();
@@ -2861,6 +2879,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active'); state.filter = btn.dataset.filter; renderTasks(); updateCounts();
   });
+});
+
+// Чекбокс «Автоформатирование списка дел на день» в настройках
+document.getElementById('autoFormatCheck').addEventListener('change', (e) => {
+  state.autoFormatDay = e.target.checked;
+  saveState(); renderTasks(); updateCounts();
 });
 
 // ===== СТАРТ =====
