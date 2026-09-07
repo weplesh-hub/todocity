@@ -19,6 +19,7 @@ import secrets
 import sqlite3
 import sys
 import time
+from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data.db')
@@ -35,11 +36,19 @@ ORIGIN_RE = re.compile(
 )
 
 
+@contextmanager
 def db():
+    # Соединение обязательно закрывается: без этого за дни работы
+    # исчерпывается лимит файловых дескрипторов (1024) и sqlite
+    # отвечает «unable to open database file»
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.execute('PRAGMA journal_mode=WAL')
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        with conn:  # транзакция: коммит при выходе, роллбек при ошибке
+            yield conn
+    finally:
+        conn.close()
 
 
 def init_db():
