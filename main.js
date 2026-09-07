@@ -2267,10 +2267,21 @@ function updateSyncUI() {
         <input type="text" id="syncLoginInput" class="input-text" placeholder="Логин (латиница, 3–32)" autocomplete="username" maxlength="32">
         <input type="password" id="syncPassInput" class="input-text" placeholder="Пароль (минимум 6)" autocomplete="current-password">
       </div>
+      <div class="sync-error" id="syncError"></div>
       <div class="sync-actions">
         <button class="mini-btn mini-btn-save" data-action="sync-login">Войти</button>
         <button class="mini-btn mini-btn-cancel" data-action="sync-register">Создать аккаунт</button>
       </div>`;
+    // Enter в полях — вход; ввод стирает прежнюю ошибку
+    const errEl = document.getElementById('syncError');
+    const loginEl = document.getElementById('syncLoginInput');
+    const passEl = document.getElementById('syncPassInput');
+    [loginEl, passEl].forEach(el => el && el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); doSyncAuth('login'); }
+    }));
+    [loginEl, passEl].forEach(el => el && el.addEventListener('input', () => {
+      if (errEl) { errEl.textContent = ''; errEl.classList.remove('visible'); }
+    }));
   }
 }
 
@@ -2336,7 +2347,13 @@ async function doSyncAuth(kind) {
   const passEl = document.getElementById('syncPassInput');
   const login = loginEl ? loginEl.value.trim() : '';
   const password = passEl ? passEl.value : '';
-  if (!login || !password) { toast('Введите логин и пароль', 'danger'); return; }
+  const errEl = document.getElementById('syncError');
+  if (errEl) { errEl.textContent = ''; errEl.classList.remove('visible'); }
+  const showErr = (msg) => {
+    if (errEl) { errEl.textContent = msg; errEl.classList.add('visible'); }
+    toast(msg, 'danger');
+  };
+  if (!login || !password) { showErr('Введите логин и пароль'); return; }
   try {
     const res = await apiCall('POST', kind === 'register' ? '/register' : '/login', { login, password });
     syncToken = res.token;
@@ -2349,7 +2366,9 @@ async function doSyncAuth(kind) {
     if (!pulled) await syncPush({ silent: true }).catch(() => {});
     updateSyncUI();
   } catch (e) {
-    toast(e.message, 'danger');
+    // сервер отвечает понятным текстом ошибки («неверный логин или пароль» и т.п.)
+    const msg = e.message ? e.message.charAt(0).toUpperCase() + e.message.slice(1) : 'Не удалось войти';
+    showErr(msg);
   }
 }
 
