@@ -84,7 +84,8 @@ function createTask(text, importance, groupId, tags, note, dueDate, repeat, time
     repeat: repeat || null,
     timerDuration: timerDuration || TIMER_DEFAULT,
     progressEnabled: false, // ручная шкала прогресса (для повторяющихся дел)
-    progress: 0             // текущий процент выполнения, 0–100
+    progress: 0,            // текущий процент выполнения, 0–100
+    progressStep: 5         // шаг шкалы, %
   };
 }
 function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML.replace(/"/g, '&quot;'); }
@@ -287,6 +288,7 @@ function loadState() {
         delete t.duration;
         if (typeof t.progressEnabled !== 'boolean') t.progressEnabled = false;
         if (typeof t.progress !== 'number') t.progress = 0;
+        if (typeof t.progressStep !== 'number') t.progressStep = 5;
       });
       state.groups = parsed.groups || [];
       state.tags = parsed.tags || [];
@@ -619,9 +621,10 @@ function renderProgress(t) {
   // Ручная шкала (для повторяющихся дел, включается в редакторе)
   if (t.progressEnabled) {
     const pct = Math.max(0, Math.min(100, Math.round(Number(t.progress) || 0)));
+    const step = [1, 5, 10, 25].includes(t.progressStep) ? t.progressStep : 5;
     return `
     <div class="task-progress manual">
-      <input type="range" class="task-progress-range" min="0" max="100" step="5" value="${pct}"
+      <input type="range" class="task-progress-range" min="0" max="100" step="${step}" value="${pct}"
              data-id="${t.id}" aria-label="Процент выполнения" title="Процент выполнения">
       <span class="task-progress-pct">${pct}%</span>
     </div>`;
@@ -1851,7 +1854,7 @@ if (!t.done && t.repeat) {
         }
         // Просто устанавливаем следующую дату без дополнительных сдвигов
         t.dueDate = nextDate.toISOString();
-        if (t.progressEnabled) t.progress = 0; // новый цикл — шкала с нуля
+        // прогресс сохраняется между повторами — шкала накапливает выполнение
         toast('Задача выполнена и перенесена на следующий день!', 'success');
     } else {
         // Если следующая дата не найдена (например, endDate в прошлом), завершаем задачу
@@ -1910,7 +1913,8 @@ function showEditTaskUI(taskId) {
     endTime: t.endTime || '',
     repeat: t.repeat ? JSON.parse(JSON.stringify(t.repeat)) : null,
     timerDuration: t.timerDuration || TIMER_DEFAULT,
-    progressEnabled: !!t.progressEnabled
+    progressEnabled: !!t.progressEnabled,
+    progressStep: [1, 5, 10, 25].includes(t.progressStep) ? t.progressStep : 5
   };
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   let repeatHTML = `
@@ -1926,10 +1930,18 @@ function showEditTaskUI(taskId) {
         <div class="weekdays-picker" style="${editState.repeat?.type === 'weekly' ? 'display: flex;' : 'display: none;'}">
           ${weekdays.map((d, i) => `<button type="button" class="weekday-btn ${editState.repeat?.days?.includes(i) ? 'active' : ''}" data-day="${i}">${d}</button>`).join('')}
         </div>
-        <label class="setting-check edit-progress-toggle" style="${editState.repeat ? 'display: inline-flex;' : 'display: none;'} margin-top: 10px;" title="Показывать шкалу процента выполнения в списке">
-          <input type="checkbox" id="editProgressCheck" ${editState.progressEnabled ? 'checked' : ''}><span class="switch"></span>
-          <span style="font-size: 13px; color: var(--fg-dim); margin-left: 8px;">Шкала прогресса выполнения</span>
-        </label>
+        <div class="edit-progress-toggle" style="${editState.repeat ? 'display: flex;' : 'display: none;'} align-items: center; gap: 16px; margin-top: 10px; flex-wrap: wrap;">
+          <label class="setting-check" title="Показывать шкалу процента выполнения в списке">
+            <input type="checkbox" id="editProgressCheck" ${editState.progressEnabled ? 'checked' : ''}><span class="switch"></span>
+            <span style="font-size: 13px; color: var(--fg-dim); margin-left: 8px;">Шкала прогресса выполнения</span>
+          </label>
+          <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-dim); cursor: pointer;">
+            Шаг
+            <select class="select-styled" id="editProgressStep" style="padding: 6px 10px; font-size: 12px;">
+              ${[1, 5, 10, 25].map(s => `<option value="${s}" ${editState.progressStep === s ? 'selected' : ''}>${s}%</option>`).join('')}
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   `;
@@ -2023,11 +2035,15 @@ function showEditTaskUI(taskId) {
     editState.timerDuration = parseInt(e.target.value);
   });
 
-  // Тумблер шкалы прогресса (актуален только при включённом повторе)
+  // Тумблер шкалы прогресса и шаг (актуальны только при включённом повторе)
   const progressCheck = taskEl.querySelector('#editProgressCheck');
   const progressToggleRow = taskEl.querySelector('.edit-progress-toggle');
   if (progressCheck) progressCheck.addEventListener('change', (e) => {
     editState.progressEnabled = e.target.checked;
+  });
+  const progressStepSelect = taskEl.querySelector('#editProgressStep');
+  if (progressStepSelect) progressStepSelect.addEventListener('change', (e) => {
+    editState.progressStep = parseInt(e.target.value, 10) || 5;
   });
 
   // Логика повтора
@@ -2054,7 +2070,7 @@ function showEditTaskUI(taskId) {
         if (!editState.repeat || editState.repeat.type !== 'weekly') editState.repeat = { type: 'weekly', days: [] };
         wdPicker.style.display = 'flex';
       }
-      if (progressToggleRow) progressToggleRow.style.display = editState.repeat ? 'inline-flex' : 'none';
+      if (progressToggleRow) progressToggleRow.style.display = editState.repeat ? 'flex' : 'none';
     });
   });
 
@@ -2134,6 +2150,7 @@ function showEditTaskUI(taskId) {
     t.timerDuration = editState.timerDuration;
     // Шкала прогресса — только у дел с повтором; сняли повтор → шкала выключается
     t.progressEnabled = !!(editState.repeat && editState.progressEnabled);
+    t.progressStep = [1, 5, 10, 25].includes(editState.progressStep) ? editState.progressStep : 5;
     render(); toast('Изменения сохранены', 'success');
   };
   const cancel = () => render();
@@ -2670,7 +2687,43 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', (e) => {
   if (!e.target.matches('.task-progress-range')) return;
   saveState();
+  // 100% — предлагаем завершить дело или оставить значение
+  const t = state.tasks.find(x => x.id === e.target.dataset.id);
+  if (t && t.progressEnabled && t.progress >= 100) showProgressCompleteDialog(t);
 });
+
+// Вопрос при достижении 100% на шкале повторяющегося дела
+function showProgressCompleteDialog(task) {
+  const old = document.getElementById('progressCompleteModal');
+  if (old) old.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'progressCompleteModal';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width: 430px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Шкала выполнения — 100%</h2>
+        <button class="modal-close" data-act="close"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div style="padding: 10px 0 18px; color: var(--fg-dim); font-size: 14px; line-height: 1.55;">
+        «${escapeHtml(task.text)}» — завершаем дело или изменяем значение в шкале выполнения?
+      </div>
+      <div class="note-modal-footer">
+        <button class="btn-cancel" data-act="keep"><i class="fa-regular fa-sliders"></i> Изменить значение</button>
+        <button class="btn-save" data-act="done"><i class="fa-regular fa-square-check"></i> Завершить дело</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) { overlay.remove(); return; }
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (!act) return;
+    overlay.remove();
+    if (act === 'done') toggleDone(task.id); // перенос на следующий повтор, прогресс сохраняется
+  });
+}
 
 document.addEventListener('dragend', (e) => {
   const taskEl = e.target.closest('.task, .timeline-chip');
