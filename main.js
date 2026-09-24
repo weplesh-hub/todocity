@@ -85,7 +85,8 @@ function createTask(text, importance, groupId, tags, note, dueDate, repeat, time
     timerDuration: timerDuration || TIMER_DEFAULT,
     progressEnabled: false, // ручная шкала прогресса (для повторяющихся дел)
     progress: 0,            // текущий процент выполнения, 0–100
-    progressStep: 5         // шаг шкалы, %
+    progressStep: 5,        // шаг шкалы, %
+    subtasksCollapsed: false // свёрнут ли список подзадач
   };
 }
 function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML.replace(/"/g, '&quot;'); }
@@ -289,6 +290,7 @@ function loadState() {
         if (typeof t.progressEnabled !== 'boolean') t.progressEnabled = false;
         if (typeof t.progress !== 'number') t.progress = 0;
         if (typeof t.progressStep !== 'number') t.progressStep = 5;
+        if (typeof t.subtasksCollapsed !== 'boolean') t.subtasksCollapsed = false;
       });
       state.groups = parsed.groups || [];
       state.tags = parsed.tags || [];
@@ -1156,7 +1158,13 @@ function taskHTML(t) {
   const isDeal = t.id === state.dealOfDayId;
   const isActiveTimer = state.activeTimer.taskId === t.id;
   const taskColor = getTaskColor(t);
-  const subtasksHTML = t.subtasks.length > 0 ? `<div class="subtasks">${t.subtasks.map(s => subtaskHTML(s, t.id, taskColor)).join('')}</div>` : '';
+  const subtasksHTML = t.subtasks.length > 0 ? `
+  <div class="subtasks">
+    <button class="subtasks-toggle ${t.subtasksCollapsed ? '' : 'open'}" data-action="toggle-subtasks" data-id="${t.id}" title="${t.subtasksCollapsed ? 'Развернуть подзадачи' : 'Свернуть подзадачи'}">
+      <i class="fa-solid fa-chevron-right"></i><span>Подзадачи · ${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}</span>
+    </button>
+    <div class="subtasks-list" ${t.subtasksCollapsed ? 'style="display: none;"' : ''}>${t.subtasks.map(s => subtaskHTML(s, t.id, taskColor)).join('')}</div>
+  </div>` : '';
   const subcountHTML = t.subtasks.length > 0 ? `<span class="task-subcount"><i class="fa-regular fa-list-alt"></i> ${t.subtasks.filter(s => s.done).length}/${t.subtasks.length}</span>` : '';
   const group = state.groups.find(g => g.id === t.groupId);
   
@@ -1891,7 +1899,7 @@ function setDealOfDay(id) {
     render(); toast('Теперь это дело дня', 'success');
   }
 }
-function addSubtask(taskId, text) { const t = state.tasks.find(x => x.id === taskId); if (!t) return; t.subtasks.push({ id: uid(), text: text.trim(), done: false }); render(); }
+function addSubtask(taskId, text) { const t = state.tasks.find(x => x.id === taskId); if (!t) return; t.subtasks.push({ id: uid(), text: text.trim(), done: false }); t.subtasksCollapsed = false; /* новое вложенное дело — раскрываем список */ render(); }
 function toggleSubtask(taskId, subId) { const t = state.tasks.find(x => x.id === taskId); if (!t) return; const s = t.subtasks.find(x => x.id === subId); if (!s) return; s.done = !s.done; render(); }
 function deleteSubtask(taskId, subId) { const t = state.tasks.find(x => x.id === taskId); if (!t) return; t.subtasks = t.subtasks.filter(x => x.id !== subId); render(); }
 
@@ -2567,6 +2575,7 @@ document.addEventListener('click', (e) => {
     case 'delete-subtask': deleteSubtask(action.dataset.task, action.dataset.sub); break;
     case 'edit-subtask': showEditSubtaskUI(action.dataset.task, action.dataset.sub); break;
     case 'show-add-subtask': showAddSubtaskUI(id); break;
+    case 'toggle-subtasks': { const t = state.tasks.find(x => x.id === id); if (t) { t.subtasksCollapsed = !t.subtasksCollapsed; render(); } break; }
     case 'start-timer': startTimer(id); break;
     case 'stop-timer': stopTimer(); break;
     case 'toggle-pause': togglePause(); break;

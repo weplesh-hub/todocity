@@ -15,8 +15,8 @@ TODOCITY — веб-приложение для ведения списков д
 
 1. **Версионирование ресурсов.** При ЛЮБОЙ правке `style.css` или `main.js` поднять версию
    в ссылках `index.html`: `style.css?v=N`, `main.js?v=N`. Иначе браузер (в т.ч. встроенный
-   IAB) отдаёт кешированную старую версию. Текущие версии (сверено 08.09.2026): **style.css?v=33,
-   main.js?v=38**.
+   IAB) отдаёт кешированную старую версию. Текущие версии (сверено 08.09.2026): **style.css?v=34,
+   main.js?v=39**.
 2. **Формат дат.** Хранить даты только как локальную полночь: хелпер `localMidnightISO(d)`.
    Никогда не использовать `toISOString().split('T')[0]` — это UTC, даёт смещение на день
    в таймзонах восточнее UTC. Для полей `<input type="date">` — хелпер `toLocalISODate(d)`.
@@ -63,7 +63,9 @@ TODOCITY — веб-приложение для ведения списков д
   сохраняется целиком в localStorage; флаг `seeded` не даёт демо-данным вернуться после удаления.
 - Модель задачи: `{ id, text, note, dueDate (локальная полночь, ISO), endDate, startTime ("ЧЧ:ММ"
   | null), endTime ("ЧЧ:ММ" | null), importance, groupId, tags[], done, subtasks[], createdAt,
-  repeat ({type: daily|weekly|monthly, days[]}|null), timerDuration }`.
+  repeat ({type: daily|weekly|monthly, days[]}|null), timerDuration, progressEnabled, progress,
+  progressStep, subtasksCollapsed }`. Подзадачи сворачиваются кнопкой «Подзадачи · X/Y»
+  над списком (поле subtasksCollapsed, синхронизируется; добавление подзадачи раскрывает список).
 - Календарь задач: `isTaskOnDay(t, day)` — учитывает повторы (daily/weekly/monthly) и endDate;
   используется списками «Сегодня»/«Завтра», счётчиками и таймлайном единообразно.
 - Кольцо прогресса «Готово» в шапке — процент по задачам **текущего дня** (состав как в списке
