@@ -1106,14 +1106,24 @@ function renderTasks() {
     const dealTask = tasks.find(t => t.id === state.dealOfDayId && !t.done);
     let activeTasks = tasks.filter(t => !t.done && t.id !== state.dealOfDayId);
     if (state.autoFormatDay) activeTasks = autoFormatTasks(activeTasks);
+    // повторяющиеся дела — отдельной группой сверху, как дело дня
+    const repeatTasks = activeTasks.filter(t => t.repeat);
+    const plainTasks = activeTasks.filter(t => !t.repeat);
+    const renderActive = () => {
+      let out = repeatTasks.map(t => taskHTML(t)).join('');
+      if (plainTasks.length > 0 && (repeatTasks.length > 0 || dealTask)) {
+        out += `<div class="tasks-divider">Остальные дела</div>`;
+      }
+      out += plainTasks.map(t => taskHTML(t)).join('');
+      return out;
+    };
     let doneTasks = tasks.filter(t => t.done);
 
     if (state.filter === 'active') {
       if (dealTask) {
         html += taskHTML(dealTask);
-        if (activeTasks.length > 0) html += `<div class="tasks-divider">Остальные дела</div>`;
       }
-      html += activeTasks.map(t => taskHTML(t)).join('');
+      html += renderActive();
       if (activeTasks.length === 0 && !dealTask) {
         html += `<div class="empty-state"><i class="fa-regular fa-clipboard"></i><p>Все дела сделаны — отличная работа!</p></div>`;
       }
@@ -1126,9 +1136,8 @@ function renderTasks() {
     } else {
       if (dealTask) {
         html += taskHTML(dealTask);
-        if (activeTasks.length > 0) html += `<div class="tasks-divider">Остальные дела</div>`;
       }
-      html += activeTasks.map(t => taskHTML(t)).join('');
+      html += renderActive();
       if (activeTasks.length === 0 && !dealTask) {
         if (doneTasks.length === 0) {
           html += `<div class="empty-state"><i class="fa-regular fa-clipboard"></i><p>Список пуст. Добавьте первое дело выше.</p></div>`;
@@ -2662,9 +2671,20 @@ document.addEventListener('click', (e) => {
 });
 
 // ===== DRAG AND DROP ОБРАБОТЧИКИ =====
+// Жест начался на ползунке прогресса? dragstart приходит от карточки (draggable),
+// а не от ползунка — поэтому запоминаем, где произошло нажатие
+let sliderGesture = false;
+document.addEventListener('pointerdown', (e) => {
+  sliderGesture = !!(e.target.closest && e.target.closest('.task-progress-range'));
+}, true);
+
 document.addEventListener('dragstart', (e) => {
-  // перетаскивание ползунка прогресса не должно тянуть карточку
-  if (e.target.matches('.task-progress-range')) { e.preventDefault(); return; }
+  // работа с ползунком не должна тянуть карточку дела
+  if (sliderGesture || e.target.closest('.task-progress-range')) {
+    sliderGesture = false;
+    e.preventDefault();
+    return;
+  }
   const taskEl = e.target.closest('.task, .timeline-chip');
   if (!taskEl) return;
 
