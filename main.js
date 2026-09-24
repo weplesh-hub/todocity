@@ -609,33 +609,16 @@ function updateCounts() {
 }
 
 // ===== ПРОГРЕСС КОНКРЕТНОЙ ЗАДАЧИ =====
-function getTaskProgress(t) {
-  if (t.subtasks.length > 0) {
-    const done = t.subtasks.filter(s => s.done).length;
-    return Math.round((done / t.subtasks.length) * 100);
-  }
-  return t.done ? 100 : 0;
-}
-
+// Полоса прогресса — только ручная шкала повторяющихся дел
+// (у дела дня и дел с подзадачами полосы больше не показываются)
 function renderProgress(t) {
-  // Ручная шкала (для повторяющихся дел, включается в редакторе)
-  if (t.progressEnabled) {
-    const pct = Math.max(0, Math.min(100, Math.round(Number(t.progress) || 0)));
-    const step = [1, 5, 10, 25].includes(t.progressStep) ? t.progressStep : 5;
-    return `
+  if (!t.progressEnabled) return '';
+  const pct = Math.max(0, Math.min(100, Math.round(Number(t.progress) || 0)));
+  const step = [1, 5, 10, 25].includes(t.progressStep) ? t.progressStep : 5;
+  return `
     <div class="task-progress manual">
       <input type="range" class="task-progress-range" min="0" max="100" step="${step}" value="${pct}"
              data-id="${t.id}" aria-label="Процент выполнения" title="Процент выполнения">
-      <span class="task-progress-pct">${pct}%</span>
-    </div>`;
-  }
-  const pct = getTaskProgress(t);
-  if (t.subtasks.length === 0 && !t.done && t.id !== state.dealOfDayId) return '';
-  return `
-    <div class="task-progress">
-      <div class="task-progress-track">
-        <div class="task-progress-fill" style="width: ${pct}%"></div>
-      </div>
       <span class="task-progress-pct">${pct}%</span>
     </div>`;
 }
@@ -1110,8 +1093,13 @@ function renderTasks() {
     const repeatTasks = activeTasks.filter(t => t.repeat);
     const plainTasks = activeTasks.filter(t => !t.repeat);
     const renderActive = () => {
-      let out = repeatTasks.map(t => taskHTML(t)).join('');
-      if (plainTasks.length > 0 && (repeatTasks.length > 0 || dealTask)) {
+      let out = '';
+      // разрыв после дела дня (перед остальным списком)
+      if (dealTask && (repeatTasks.length > 0 || plainTasks.length > 0)) {
+        out += `<div class="tasks-divider">${repeatTasks.length > 0 ? 'Повторяющиеся' : 'Остальные дела'}</div>`;
+      }
+      out += repeatTasks.map(t => taskHTML(t)).join('');
+      if (repeatTasks.length > 0 && plainTasks.length > 0) {
         out += `<div class="tasks-divider">Остальные дела</div>`;
       }
       out += plainTasks.map(t => taskHTML(t)).join('');
