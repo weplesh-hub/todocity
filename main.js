@@ -82,7 +82,9 @@ function createTask(text, importance, groupId, tags, note, dueDate, repeat, time
     subtasks: [],
     createdAt: Date.now(),
     repeat: repeat || null,
-    timerDuration: timerDuration || TIMER_DEFAULT
+    timerDuration: timerDuration || TIMER_DEFAULT,
+    progressEnabled: false, // ручная шкала прогресса (для повторяющихся дел)
+    progress: 0             // текущий процент выполнения, 0–100
   };
 }
 function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML.replace(/"/g, '&quot;'); }
@@ -283,6 +285,8 @@ function loadState() {
       state.tasks.forEach(t => {
         if (t.duration && t.startTime && !t.endTime) t.endTime = addMinutes(t.startTime, t.duration);
         delete t.duration;
+        if (typeof t.progressEnabled !== 'boolean') t.progressEnabled = false;
+        if (typeof t.progress !== 'number') t.progress = 0;
       });
       state.groups = parsed.groups || [];
       state.tags = parsed.tags || [];
@@ -612,6 +616,16 @@ function getTaskProgress(t) {
 }
 
 function renderProgress(t) {
+  // Ручная шкала (для повторяющихся дел, включается в редакторе)
+  if (t.progressEnabled) {
+    const pct = Math.max(0, Math.min(100, Math.round(Number(t.progress) || 0)));
+    return `
+    <div class="task-progress manual">
+      <input type="range" class="task-progress-range" min="0" max="100" step="5" value="${pct}"
+             data-id="${t.id}" aria-label="Процент выполнения" title="Процент выполнения">
+      <span class="task-progress-pct">${pct}%</span>
+    </div>`;
+  }
   const pct = getTaskProgress(t);
   if (t.subtasks.length === 0 && !t.done && t.id !== state.dealOfDayId) return '';
   return `
@@ -1837,6 +1851,7 @@ if (!t.done && t.repeat) {
         }
         // Просто устанавливаем следующую дату без дополнительных сдвигов
         t.dueDate = nextDate.toISOString();
+        if (t.progressEnabled) t.progress = 0; // новый цикл — шкала с нуля
         toast('Задача выполнена и перенесена на следующий день!', 'success');
     } else {
         // Если следующая дата не найдена (например, endDate в прошлом), завершаем задачу
@@ -1894,7 +1909,8 @@ function showEditTaskUI(taskId) {
     startTime: t.startTime || '',
     endTime: t.endTime || '',
     repeat: t.repeat ? JSON.parse(JSON.stringify(t.repeat)) : null,
-    timerDuration: t.timerDuration || TIMER_DEFAULT
+    timerDuration: t.timerDuration || TIMER_DEFAULT,
+    progressEnabled: !!t.progressEnabled
   };
   const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
   let repeatHTML = `
@@ -1910,6 +1926,10 @@ function showEditTaskUI(taskId) {
         <div class="weekdays-picker" style="${editState.repeat?.type === 'weekly' ? 'display: flex;' : 'display: none;'}">
           ${weekdays.map((d, i) => `<button type="button" class="weekday-btn ${editState.repeat?.days?.includes(i) ? 'active' : ''}" data-day="${i}">${d}</button>`).join('')}
         </div>
+        <label class="setting-check edit-progress-toggle" style="${editState.repeat ? 'display: inline-flex;' : 'display: none;'} margin-top: 10px;" title="Показывать шкалу процента выполнения в списке">
+          <input type="checkbox" id="editProgressCheck" ${editState.progressEnabled ? 'checked' : ''}><span class="switch"></span>
+          <span style="font-size: 13px; color: var(--fg-dim); margin-left: 8px;">Шкала прогресса выполнения</span>
+        </label>
       </div>
     </div>
   `;
@@ -2003,6 +2023,13 @@ function showEditTaskUI(taskId) {
     editState.timerDuration = parseInt(e.target.value);
   });
 
+  // Тумблер шкалы прогресса (актуален только при включённом повторе)
+  const progressCheck = taskEl.querySelector('#editProgressCheck');
+  const progressToggleRow = taskEl.querySelector('.edit-progress-toggle');
+  if (progressCheck) progressCheck.addEventListener('change', (e) => {
+    editState.progressEnabled = e.target.checked;
+  });
+
   // Логика повтора
   taskEl.querySelectorAll('.repeat-opt-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2010,23 +2037,24 @@ function showEditTaskUI(taskId) {
       btn.classList.add('active');
       const repType = btn.dataset.rep;
       const wdPicker = taskEl.querySelector('.weekdays-picker');
-      
-      if (repType === 'none') { 
-        editState.repeat = null; 
-        wdPicker.style.display = 'none'; 
+
+      if (repType === 'none') {
+        editState.repeat = null;
+        wdPicker.style.display = 'none';
       }
-      else if (repType === 'daily') { 
-        editState.repeat = { type: 'daily' }; 
-        wdPicker.style.display = 'none'; 
+      else if (repType === 'daily') {
+        editState.repeat = { type: 'daily' };
+        wdPicker.style.display = 'none';
       }
-      else if (repType === 'monthly') { 
-        editState.repeat = { type: 'monthly' }; 
-        wdPicker.style.display = 'none'; 
+      else if (repType === 'monthly') {
+        editState.repeat = { type: 'monthly' };
+        wdPicker.style.display = 'none';
       }
-      else if (repType === 'weekly') { 
+      else if (repType === 'weekly') {
         if (!editState.repeat || editState.repeat.type !== 'weekly') editState.repeat = { type: 'weekly', days: [] };
-        wdPicker.style.display = 'flex'; 
+        wdPicker.style.display = 'flex';
       }
+      if (progressToggleRow) progressToggleRow.style.display = editState.repeat ? 'inline-flex' : 'none';
     });
   });
 
@@ -2104,6 +2132,8 @@ function showEditTaskUI(taskId) {
     t.endTime = endVal || null;
     t.repeat = editState.repeat;
     t.timerDuration = editState.timerDuration;
+    // Шкала прогресса — только у дел с повтором; сняли повтор → шкала выключается
+    t.progressEnabled = !!(editState.repeat && editState.progressEnabled);
     render(); toast('Изменения сохранены', 'success');
   };
   const cancel = () => render();
@@ -2616,6 +2646,8 @@ document.addEventListener('click', (e) => {
 
 // ===== DRAG AND DROP ОБРАБОТЧИКИ =====
 document.addEventListener('dragstart', (e) => {
+  // перетаскивание ползунка прогресса не должно тянуть карточку
+  if (e.target.matches('.task-progress-range')) { e.preventDefault(); return; }
   const taskEl = e.target.closest('.task, .timeline-chip');
   if (!taskEl) return;
 
@@ -2623,6 +2655,21 @@ document.addEventListener('dragstart', (e) => {
   taskEl.classList.add('dragging');
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', dragData.id);
+});
+
+// ===== РУЧНАЯ ШКАЛА ПРОГРЕССА =====
+// input — живое обновление числа, change (отпускание ползунка) — сохранение
+document.addEventListener('input', (e) => {
+  if (!e.target.matches('.task-progress-range')) return;
+  const t = state.tasks.find(x => x.id === e.target.dataset.id);
+  if (!t) return;
+  t.progress = parseInt(e.target.value, 10) || 0;
+  const label = e.target.closest('.task-progress')?.querySelector('.task-progress-pct');
+  if (label) label.textContent = t.progress + '%';
+});
+document.addEventListener('change', (e) => {
+  if (!e.target.matches('.task-progress-range')) return;
+  saveState();
 });
 
 document.addEventListener('dragend', (e) => {
