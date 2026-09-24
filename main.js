@@ -1089,8 +1089,10 @@ function renderTasks() {
     const dealTask = tasks.find(t => t.id === state.dealOfDayId && !t.done);
     let activeTasks = tasks.filter(t => !t.done && t.id !== state.dealOfDayId);
     if (state.autoFormatDay) activeTasks = autoFormatTasks(activeTasks);
-    // повторяющиеся дела — отдельной группой сверху, как дело дня
-    const repeatTasks = activeTasks.filter(t => t.repeat);
+    // повторяющиеся дела — отдельной группой сверху, как дело дня;
+    // по умолчанию внутри группы сначала дела со шкалой прогресса, затем без неё
+    const repeatTasks = activeTasks.filter(t => t.repeat)
+      .sort((a, b) => (b.progressEnabled ? 1 : 0) - (a.progressEnabled ? 1 : 0));
     const plainTasks = activeTasks.filter(t => !t.repeat);
     const renderActive = () => {
       let out = '';
