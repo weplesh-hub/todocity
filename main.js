@@ -2010,6 +2010,7 @@ function showEditTaskUI(taskId) {
   const t = state.tasks.find(x => x.id === taskId); if (!t) return;
   const taskEl = document.querySelector(`.task[data-id="${taskId}"]`);
   if (!taskEl) return;
+  taskEl.draggable = false; // при редактировании текста карточка не перетаскивается (render вернёт draggable)
   const editState = {
     text: t.text,
     importance: t.importance,
@@ -2283,6 +2284,7 @@ function showEditSubtaskUI(taskId, subId) {
   const s = t.subtasks.find(x => x.id === subId); if (!s) return;
   const subEl = document.querySelector(`[data-sub-id="${subId}"]`);
   if (!subEl) return;
+  document.querySelector(`.task[data-id="${taskId}"]`)?.setAttribute('draggable', 'false'); // при правке подзадачи карточка не перетаскивается
   const textEl = subEl.querySelector('.subtask-text');
   const actionsEl = subEl.querySelector('.subtask-actions');
   if (!textEl) return;
