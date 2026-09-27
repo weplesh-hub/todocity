@@ -1225,6 +1225,7 @@ function taskHTML(t) {
           <button class="icon-btn" data-action="edit-task" data-id="${t.id}" title="Редактировать"><i class="fa-regular fa-pen-to-square"></i></button>
           <button class="icon-btn ${isActiveTimer ? 'active' : ''}" data-action="${isActiveTimer ? 'stop-timer' : 'start-timer'}" data-id="${t.id}" title="${isActiveTimer ? 'Остановить таймер' : 'Фокус-таймер'}"><i class="fa-regular ${isActiveTimer ? 'fa-circle-stop' : 'fa-circle-play'}"></i></button>
           <button class="icon-btn ${isDeal ? 'active' : ''}" data-action="set-deal" data-id="${t.id}" title="${isDeal ? 'Снять дело дня' : 'Сделать делом дня'}"><i class="fa-regular fa-star"></i></button>
+          <button class="icon-btn" data-action="change-date" data-id="${t.id}" title="Изменить дату"><i class="fa-regular fa-calendar-plus"></i></button>
           <button class="icon-btn" data-action="show-add-subtask" data-id="${t.id}" title="Добавить подзадачу"><i class="fa-regular fa-square-plus"></i></button>
           <button class="icon-btn danger" data-action="delete-task" data-id="${t.id}" title="Удалить"><i class="fa-regular fa-trash-can"></i></button>
         </div>
@@ -1903,6 +1904,107 @@ function addSubtask(taskId, text) { const t = state.tasks.find(x => x.id === tas
 function toggleSubtask(taskId, subId) { const t = state.tasks.find(x => x.id === taskId); if (!t) return; const s = t.subtasks.find(x => x.id === subId); if (!s) return; s.done = !s.done; render(); }
 function deleteSubtask(taskId, subId) { const t = state.tasks.find(x => x.id === taskId); if (!t) return; t.subtasks = t.subtasks.filter(x => x.id !== subId); render(); }
 
+// ===== БЫСТРАЯ СМЕНА ДАТЫ ДЕЛА (поповер с кнопками и календарём) =====
+let datePick = { taskId: null, year: 0, month: 0 };
+
+function nextMondayDate() {
+  const d = new Date();
+  const day = d.getDay() === 0 ? 7 : d.getDay(); // Пн=1 … Вс=7
+  const diff = ((8 - day) % 7) || 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function closeDatePick() {
+  document.querySelector('.date-pick-pop')?.remove();
+  datePick.taskId = null;
+}
+
+function toggleDatePick(taskId) {
+  const already = datePick.taskId === taskId && document.querySelector('.date-pick-pop');
+  closeDatePick();
+  if (already) return;
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const base = task.dueDate ? new Date(task.dueDate) : new Date();
+  datePick = { taskId, year: base.getFullYear(), month: base.getMonth() };
+  renderDatePick();
+}
+
+function renderDatePick() {
+  const task = state.tasks.find(t => t.id === datePick.taskId);
+  if (!task) return;
+  let el = document.querySelector('.date-pick-pop');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'date-pick-pop';
+    document.body.appendChild(el);
+  }
+  const { year, month } = datePick;
+  const monthsArr = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  const due = task.dueDate ? new Date(task.dueDate) : null;
+  const isDueMonth = due && due.getFullYear() === year && due.getMonth() === month;
+
+  let cal = `<div class="cal-header">
+    <button class="cal-nav-btn" data-action="dp-prev" data-id="${task.id}"><i class="fa-solid fa-chevron-left"></i></button>
+    <button class="cal-title">${monthsArr[month]} ${year}</button>
+    <button class="cal-nav-btn" data-action="dp-next" data-id="${task.id}"><i class="fa-solid fa-chevron-right"></i></button>
+  </div>
+  <div class="cal-grid">
+    <div class="cal-day-name">Пн</div><div class="cal-day-name">Вт</div><div class="cal-day-name">Ср</div>
+    <div class="cal-day-name">Чт</div><div class="cal-day-name">Пт</div><div class="cal-day-name">Сб</div><div class="cal-day-name">Вс</div>`;
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  let startDow = firstDay.getDay(); if (startDow === 0) startDow = 7; startDow--;
+  const prevLast = new Date(year, month, 0).getDate();
+  for (let i = startDow - 1; i >= 0; i--) cal += `<div class="cal-day outside">${prevLast - i}</div>`;
+  const today = new Date();
+  const isCurMonth = today.getFullYear() === year && today.getMonth() === month;
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    let cls = 'cal-day';
+    if (isCurMonth && d === today.getDate()) cls += ' today';
+    if (isDueMonth && d === due.getDate()) cls += ' selected';
+    cal += `<div class="${cls}" data-action="dp-day" data-id="${task.id}" data-day="${d}">${d}</div>`;
+  }
+  let cnt = startDow + lastDay.getDate(), nx = 1;
+  while (cnt % 7 !== 0) { cal += `<div class="cal-day outside">${nx++}</div>`; cnt++; }
+  cal += `</div>`;
+
+  el.innerHTML = `
+    <div class="date-quick">
+      <button class="date-quick-btn" data-action="dp-quick" data-id="${task.id}" data-off="0">Сегодня</button>
+      <button class="date-quick-btn" data-action="dp-quick" data-id="${task.id}" data-off="1">Завтра</button>
+      <button class="date-quick-btn" data-action="dp-quick" data-id="${task.id}" data-off="2">Послезавтра</button>
+      <button class="date-quick-btn" data-action="dp-quick" data-id="${task.id}" data-off="monday">Следующий понедельник</button>
+    </div>
+    ${cal}`;
+
+  // позиционируем у кнопки изменения даты, не выходя за экран
+  const btn = document.querySelector(`.task[data-id="${task.id}"] [data-action="change-date"]`);
+  const r = btn ? btn.getBoundingClientRect() : { right: 320, bottom: 200 };
+  const w = 304, h = el.offsetHeight || 420;
+  let left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
+  let top = r.bottom + 8;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+  el.style.left = left + 'px';
+  el.style.top = top + 'px';
+}
+
+function setTaskDate(taskId, date) {
+  const t = state.tasks.find(x => x.id === taskId);
+  if (!t || !(date instanceof Date) || isNaN(date)) return;
+  t.dueDate = localMidnightISO(date);
+  // дело дня, уехавшее с сегодняшней даты, перестаёт быть делом дня
+  if (state.dealOfDayId === t.id) {
+    const now = new Date();
+    const same = date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+    if (!same) state.dealOfDayId = null;
+  }
+  closeDatePick();
+  saveState(); render();
+  toast('Дата перенесена: ' + formatRuDate(date), 'success');
+}
+
 // ===== РЕДАКТИРОВАНИЕ =====
 function showEditTaskUI(taskId) {
   const t = state.tasks.find(x => x.id === taskId); if (!t) return;
@@ -2468,7 +2570,14 @@ async function doSyncLogout() {
 }
 
 // ===== ДЕЛЕГИРОВАНИЕ СОБЫТИЙ =====
+// скролл страницы или списка закрывает плавающий поповер даты
+window.addEventListener('scroll', () => { if (document.querySelector('.date-pick-pop')) closeDatePick(); }, true);
+
 document.addEventListener('click', (e) => {
+  // поповер смены даты: закрыть по клику мимо него
+  const dpOpen = document.querySelector('.date-pick-pop');
+  if (dpOpen && !dpOpen.contains(e.target) && !e.target.closest('[data-action="change-date"]')) closeDatePick();
+
   if (e.target.matches('#settingsModal.modal-overlay')) { closeSettings(); return; }
   if (e.target.matches('#noteModal.modal-overlay')) { closeNoteModal(); return; }
   if (e.target.matches('#iconModal.modal-overlay')) { closeIconModal(); return; }
@@ -2575,6 +2684,21 @@ document.addEventListener('click', (e) => {
     case 'delete-subtask': deleteSubtask(action.dataset.task, action.dataset.sub); break;
     case 'edit-subtask': showEditSubtaskUI(action.dataset.task, action.dataset.sub); break;
     case 'show-add-subtask': showAddSubtaskUI(id); break;
+    case 'change-date': toggleDatePick(id); break;
+    case 'dp-quick': {
+      const t = state.tasks.find(x => x.id === id); if (!t) break;
+      let d;
+      if (action.dataset.off === 'monday') d = nextMondayDate();
+      else { d = new Date(); d.setDate(d.getDate() + parseInt(action.dataset.off, 10)); }
+      setTaskDate(id, d);
+      break;
+    }
+    case 'dp-day': {
+      setTaskDate(id, new Date(datePick.year, datePick.month, parseInt(action.dataset.day, 10)));
+      break;
+    }
+    case 'dp-prev': datePick.month--; if (datePick.month < 0) { datePick.month = 11; datePick.year--; } renderDatePick(); break;
+    case 'dp-next': datePick.month++; if (datePick.month > 11) { datePick.month = 0; datePick.year++; } renderDatePick(); break;
     case 'toggle-subtasks': { const t = state.tasks.find(x => x.id === id); if (t) { t.subtasksCollapsed = !t.subtasksCollapsed; render(); } break; }
     case 'start-timer': startTimer(id); break;
     case 'stop-timer': stopTimer(); break;
@@ -2907,6 +3031,7 @@ document.addEventListener('keydown', (e) => {
   }
   
   if (e.key === 'Escape') {
+    if (document.querySelector('.date-pick-pop')) { closeDatePick(); return; }
     if (document.getElementById('timelinePanel').classList.contains('open')) {
       closeTimeline();
     }

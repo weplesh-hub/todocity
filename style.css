@@ -387,6 +387,12 @@ body[data-theme="light"] input[type="time"].input-text { color-scheme: light; }
 .subtasks-toggle i { font-size: 10px; transition: transform 0.2s; }
 .subtasks-toggle.open i { transform: rotate(90deg); }
 .subtasks-list { display: flex; flex-direction: column; gap: 2px; }
+/* Поповер быстрой смены даты дела */
+.date-pick-pop { position: fixed; z-index: 300; width: 304px; padding: 14px; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 14px; box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28); animation: task-in 0.15s ease-out; }
+.date-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.date-quick-btn { padding: 8px 6px; font-family: inherit; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--fg-dim); cursor: pointer; transition: all 0.15s; }
+.date-quick-btn:hover { color: var(--accent); border-color: var(--accent); background: rgba(255, 107, 74, 0.1); }
+.date-quick-btn:nth-child(4) { grid-column: 1 / -1; }
 .subtask { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; transition: background 0.15s; background: rgba(255, 255, 255, 0.063); }
 body[data-theme="light"] .subtask { background: rgba(0, 0, 0, 0.041); }
 .subtask:hover { background: var(--bg-card-hover); }
