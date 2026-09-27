@@ -14,6 +14,7 @@ let state = {
   tasks: [],
   groups: [],
   tags: [],
+  folders: [], // тематические папки внутри списка дел: { id, name, collapsed }
   systemListsConfig: {
     all: { icon: 'fa-circle-dot', color: '#f5f1e8' },
     inbox: { icon: 'fa-inbox', color: '#fbbf24' },
@@ -86,7 +87,8 @@ function createTask(text, importance, groupId, tags, note, dueDate, repeat, time
     progressEnabled: false, // ручная шкала прогресса (для повторяющихся дел)
     progress: 0,            // текущий процент выполнения, 0–100
     progressStep: 5,        // шаг шкалы, %
-    subtasksCollapsed: false // свёрнут ли список подзадач
+    subtasksCollapsed: false, // свёрнут ли список подзадач
+    folderId: null          // тематическая папка внутри списка (null = без папки)
   };
 }
 function escapeHtml(s) { const div = document.createElement('div'); div.textContent = s; return div.innerHTML.replace(/"/g, '&quot;'); }
@@ -257,6 +259,7 @@ function getStateSnapshot() {
     tasks: state.tasks,
     groups: state.groups,
     tags: state.tags,
+    folders: state.folders,
     systemListsConfig: state.systemListsConfig,
     listVisibility: state.listVisibility,
     dealOfDayId: state.dealOfDayId,
@@ -291,7 +294,9 @@ function loadState() {
         if (typeof t.progress !== 'number') t.progress = 0;
         if (typeof t.progressStep !== 'number') t.progressStep = 5;
         if (typeof t.subtasksCollapsed !== 'boolean') t.subtasksCollapsed = false;
+        if (!t.folderId) t.folderId = null;
       });
+      state.folders = Array.isArray(parsed.folders) ? parsed.folders : [];
       state.groups = parsed.groups || [];
       state.tags = parsed.tags || [];
    if (parsed.systemListsConfig) {
@@ -978,6 +983,137 @@ function autoFormatTasks(arr) {
   });
 }
 
+// Общий рендер группы дел (корень или тематическая папка):
+// дело дня → разрыв «Повторяющиеся» → повторы (со шкалой выше) → разрыв «Остальные дела» → остальные
+function taskGroupHTML(list) {
+  const dealTask = list.find(t => t.id === state.dealOfDayId && !t.done);
+  let active = list.filter(t => !t.done && t.id !== state.dealOfDayId);
+  if (state.autoFormatDay) active = autoFormatTasks(active);
+  const repeatTasks = active.filter(t => t.repeat)
+    .sort((a, b) => (b.progressEnabled ? 1 : 0) - (a.progressEnabled ? 1 : 0));
+  const plainTasks = active.filter(t => !t.repeat);
+  let out = '';
+  if (dealTask) out += taskHTML(dealTask);
+  if (dealTask && (repeatTasks.length > 0 || plainTasks.length > 0)) {
+    out += `<div class="tasks-divider">${repeatTasks.length > 0 ? 'Повторяющиеся' : 'Остальные дела'}</div>`;
+  }
+  out += repeatTasks.map(t => taskHTML(t)).join('');
+  if (repeatTasks.length > 0 && plainTasks.length > 0) {
+    out += `<div class="tasks-divider">Остальные дела</div>`;
+  }
+  out += plainTasks.map(t => taskHTML(t)).join('');
+  return out;
+}
+
+// ===== ТЕМАТИЧЕСКИЕ ПАПКИ В СПИСКЕ ДЕЛ =====
+function folderHTML(folder, viewTasks) {
+  const fTasks = viewTasks.filter(t => t.folderId === folder.id);
+  const activeCount = fTasks.filter(t => !t.done).length;
+  const actions = `
+    <span class="folder-actions">
+      <button class="folder-act" data-action="rename-folder" data-id="${folder.id}" title="Переименовать"><i class="fa-regular fa-pen-to-square"></i></button>
+      <button class="folder-act" data-action="ungroup-folder" data-id="${folder.id}" title="Разгруппировать (дела останутся в списке)"><i class="fa-solid fa-box-open"></i></button>
+      <button class="folder-act danger" data-action="delete-folder" data-id="${folder.id}" title="Удалить папку вместе с делами"><i class="fa-regular fa-trash-can"></i></button>
+    </span>`;
+  if (fTasks.length === 0) {
+    // пустая папка — тонкая пунктирная строка-цель для перетаскивания дел
+    return `
+    <div class="folder-empty" data-folder="${folder.id}">
+      <i class="fa-regular fa-folder-open"></i>
+      <span class="folder-name" data-action="rename-folder" data-id="${folder.id}" title="Переименовать">${escapeHtml(folder.name)}</span>
+      <em>— перетащите дела сюда</em>
+      ${actions}
+    </div>`;
+  }
+  return `
+  <div class="folder" data-folder="${folder.id}">
+    <div class="folder-header" data-folder-target="${folder.id}">
+      <button class="folder-toggle ${folder.collapsed ? '' : 'open'}" data-action="toggle-folder" data-id="${folder.id}" title="${folder.collapsed ? 'Развернуть' : 'Свернуть'}"><i class="fa-solid fa-chevron-right"></i></button>
+      <i class="fa-regular fa-folder"></i>
+      <span class="folder-name" data-action="rename-folder" data-id="${folder.id}" title="Переименовать">${escapeHtml(folder.name)}</span>
+      <span class="folder-count">${activeCount}</span>
+      ${actions}
+    </div>
+    ${folder.collapsed ? '' : `<div class="folder-body">${taskGroupHTML(fTasks)}</div>`}
+  </div>`;
+}
+
+function addFolder() {
+  state.folders.push({ id: uid(), name: 'Папка ' + (state.folders.length + 1), collapsed: false });
+  saveState(); render();
+  toast('Папка создана — перетащите в неё дела и задайте название', 'info');
+}
+function toggleFolder(id) {
+  const f = state.folders.find(x => x.id === id); if (!f) return;
+  f.collapsed = !f.collapsed;
+  saveState(); render();
+}
+function startRenameFolder(id) {
+  const f = state.folders.find(x => x.id === id); if (!f) return;
+  const nameEl = document.querySelector(`.folder[data-folder="${id}"] .folder-name, .folder-empty[data-folder="${id}"] .folder-name`);
+  if (!nameEl || nameEl.querySelector('input')) return;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'folder-rename-input';
+  input.value = f.name;
+  input.maxLength = 60;
+  nameEl.replaceWith(input);
+  input.focus(); input.select();
+  const commit = () => { const v = input.value.trim(); if (v) f.name = v; saveState(); render(); };
+  const cancel = () => render();
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', commit);
+}
+function ungroupFolder(id) {
+  const f = state.folders.find(x => x.id === id); if (!f) return;
+  state.tasks.forEach(t => { if (t.folderId === id) t.folderId = null; });
+  state.folders = state.folders.filter(x => x.id !== id);
+  saveState(); render();
+  toast(`Папка «${f.name}» разгруппирована — дела остались в списке`, 'info');
+}
+function deleteFolder(id) {
+  const f = state.folders.find(x => x.id === id); if (!f) return;
+  const inside = state.tasks.filter(t => t.folderId === id);
+  const old = document.getElementById('folderDeleteModal'); if (old) old.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'folderDeleteModal';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Удалить папку?</h2>
+        <button class="modal-close" data-act="close"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div style="padding: 10px 0 18px; color: var(--fg-dim); font-size: 14px; line-height: 1.55;">
+        «${escapeHtml(f.name)}»${inside.length ? ` и дела внутри (${inside.length})` : ''}?
+      </div>
+      <div class="note-modal-footer">
+        <button class="btn-cancel" data-act="close">Отмена</button>
+        <button class="btn-cancel" data-act="ungroup"><i class="fa-solid fa-box-open"></i> Только папку</button>
+        <button class="btn-save" data-act="delete"><i class="fa-regular fa-trash-can"></i> Удалить с делами</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) { overlay.remove(); return; }
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (!act) return;
+    overlay.remove();
+    if (act === 'ungroup') ungroupFolder(id);
+    if (act === 'delete') {
+      state.tasks = state.tasks.filter(t => t.folderId !== id);
+      state.folders = state.folders.filter(x => x.id !== id);
+      saveState(); render();
+      toast('Папка удалена', 'info');
+    }
+  });
+}
+
 function renderTasks() {
   const list = document.getElementById('tasksList');
   const titleEl = document.getElementById('tasksTitleText');
@@ -1088,35 +1224,18 @@ function renderTasks() {
       });
     }
   } else {
-    const dealTask = tasks.find(t => t.id === state.dealOfDayId && !t.done);
-    let activeTasks = tasks.filter(t => !t.done && t.id !== state.dealOfDayId);
-    if (state.autoFormatDay) activeTasks = autoFormatTasks(activeTasks);
-    // повторяющиеся дела — отдельной группой сверху, как дело дня;
-    // по умолчанию внутри группы сначала дела со шкалой прогресса, затем без неё
-    const repeatTasks = activeTasks.filter(t => t.repeat)
-      .sort((a, b) => (b.progressEnabled ? 1 : 0) - (a.progressEnabled ? 1 : 0));
-    const plainTasks = activeTasks.filter(t => !t.repeat);
-    const renderActive = () => {
-      let out = '';
-      // разрыв после дела дня (перед остальным списком)
-      if (dealTask && (repeatTasks.length > 0 || plainTasks.length > 0)) {
-        out += `<div class="tasks-divider">${repeatTasks.length > 0 ? 'Повторяющиеся' : 'Остальные дела'}</div>`;
-      }
-      out += repeatTasks.map(t => taskHTML(t)).join('');
-      if (repeatTasks.length > 0 && plainTasks.length > 0) {
-        out += `<div class="tasks-divider">Остальные дела</div>`;
-      }
-      out += plainTasks.map(t => taskHTML(t)).join('');
-      return out;
-    };
+    // корень — дела без папки; папки рендерятся после основного списка
+    const rootTasks = tasks.filter(t => !t.folderId);
+    const rootDeal = rootTasks.find(t => t.id === state.dealOfDayId && !t.done);
+    const rootActiveCount = rootTasks.filter(t => !t.done && t.id !== state.dealOfDayId).length;
+    const foldersHTML = state.folders.map(f => folderHTML(f, tasks)).join('');
+    const anyFolderActive = state.folders.some(f => tasks.some(t => t.folderId === f.id && !t.done));
     let doneTasks = tasks.filter(t => t.done);
 
     if (state.filter === 'active') {
-      if (dealTask) {
-        html += taskHTML(dealTask);
-      }
-      html += renderActive();
-      if (activeTasks.length === 0 && !dealTask) {
+      html += taskGroupHTML(rootTasks);
+      html += foldersHTML;
+      if (rootActiveCount === 0 && !rootDeal && !anyFolderActive) {
         html += `<div class="empty-state"><i class="fa-regular fa-clipboard"></i><p>Все дела сделаны — отличная работа!</p></div>`;
       }
     } else if (state.filter === 'done') {
@@ -1126,17 +1245,15 @@ function renderTasks() {
         html += doneTasks.map(t => taskHTML(t)).join('');
       }
     } else {
-      if (dealTask) {
-        html += taskHTML(dealTask);
-      }
-      html += renderActive();
-      if (activeTasks.length === 0 && !dealTask) {
+      html += taskGroupHTML(rootTasks);
+      if (rootActiveCount === 0 && !rootDeal && !anyFolderActive) {
         if (doneTasks.length === 0) {
           html += `<div class="empty-state"><i class="fa-regular fa-clipboard"></i><p>Список пуст. Добавьте первое дело выше.</p></div>`;
         } else {
           html += `<div class="empty-state"><i class="fa-regular fa-clipboard"></i><p>Все дела сделаны — отличная работа!</p></div>`;
         }
       }
+      html += foldersHTML;
 
       if (doneTasks.length > 0) {
         html += `
@@ -2484,6 +2601,7 @@ function applyServerState(srv) {
     state.tasks = srv.tasks || [];
     state.groups = srv.groups || [];
     state.tags = srv.tags || [];
+    state.folders = Array.isArray(srv.folders) ? srv.folders : state.folders;
     if (srv.systemListsConfig) state.systemListsConfig = { ...state.systemListsConfig, ...srv.systemListsConfig };
     state.listVisibility = srv.listVisibility || state.listVisibility;
     state.dealOfDayId = srv.dealOfDayId || null;
@@ -2687,6 +2805,11 @@ document.addEventListener('click', (e) => {
     case 'edit-subtask': showEditSubtaskUI(action.dataset.task, action.dataset.sub); break;
     case 'show-add-subtask': showAddSubtaskUI(id); break;
     case 'change-date': toggleDatePick(id); break;
+    case 'add-folder': addFolder(); break;
+    case 'toggle-folder': toggleFolder(id); break;
+    case 'rename-folder': startRenameFolder(id); break;
+    case 'ungroup-folder': ungroupFolder(id); break;
+    case 'delete-folder': deleteFolder(id); break;
     case 'dp-quick': {
       const t = state.tasks.find(x => x.id === id); if (!t) break;
       let d;
@@ -2902,6 +3025,15 @@ document.addEventListener('dragover', (e) => {
     document.querySelectorAll('.group-item.drop-target').forEach(el => el.classList.remove('drop-target'));
   }
 
+  // подсветка тематических папок как целей перетаскивания
+  const folderHover = e.target.closest('.folder-header, .folder-empty');
+  if (folderHover) {
+    document.querySelectorAll('.folder-header.drop-target, .folder-empty.drop-target').forEach(el => el.classList.remove('drop-target'));
+    folderHover.classList.add('drop-target');
+  } else {
+    document.querySelectorAll('.folder-header.drop-target, .folder-empty.drop-target').forEach(el => el.classList.remove('drop-target'));
+  }
+
   const tasksList = document.getElementById('tasksList');
   if (tasksList.contains(e.target)) {
     const targetTask = e.target.closest('.task:not(.dragging)');
@@ -2938,6 +3070,22 @@ document.addEventListener('drop', (e) => {
     return;
   }
 
+  // Дроп на тематическую папку (заголовок или пустую строку-цель): переносим дело внутрь
+  const folderTarget = e.target.closest('.folder-header, .folder-empty');
+  if (folderTarget) {
+    const fid = folderTarget.dataset.folderTarget || folderTarget.dataset.folder;
+    const task = state.tasks.find(t => t.id === dragData.id);
+    const folder = state.folders.find(f => f.id === fid);
+    if (task && folder && task.folderId !== fid) {
+      task.folderId = fid;
+      saveState(); render();
+      toast(`Дело перенесено в «${folder.name}»`, 'success');
+    }
+    folderTarget.classList.remove('drop-target');
+    dragData.id = null;
+    return;
+  }
+
   const groupItem = e.target.closest('.group-item');
   if (groupItem) {
     const targetGroupId = groupItem.dataset.groupId;
@@ -2951,19 +3099,27 @@ document.addEventListener('drop', (e) => {
       if (targetTask) {
         const rect = targetTask.getBoundingClientRect();
         const insertBefore = e.clientY < rect.top + rect.height / 2;
+        // дело встаёт в ту же папку, что и дело-цель (null = корень списка)
+        const dragged = state.tasks.find(t => t.id === dragData.id);
+        const target = state.tasks.find(t => t.id === targetTask.dataset.id);
+        if (dragged && target && dragged.folderId !== (target.folderId || null)) {
+          dragged.folderId = target.folderId || null;
+        }
         reorderTasks(dragData.id, targetTask.dataset.id, insertBefore);
       } else {
         const draggedIndex = state.tasks.findIndex(t => t.id === dragData.id);
         if (draggedIndex !== -1) {
           const [draggedTask] = state.tasks.splice(draggedIndex, 1);
+          draggedTask.folderId = null; // бросили в пустоту списка — возвращаем в корень
           state.tasks.push(draggedTask);
           render();
         }
       }
     }
   }
-  
+
   document.querySelectorAll('.group-item.drop-target').forEach(el => el.classList.remove('drop-target'));
+  document.querySelectorAll('.folder-header.drop-target, .folder-empty.drop-target').forEach(el => el.classList.remove('drop-target'));
   document.querySelectorAll('.task.drag-over-top, .task.drag-over-bottom').forEach(el => el.classList.remove('drag-over-top', 'drag-over-bottom'));
 });
 
