@@ -297,6 +297,8 @@ function loadState() {
         if (!t.folderId) t.folderId = null;
       });
       state.folders = Array.isArray(parsed.folders) ? parsed.folders : [];
+      // миграция: прежние папки без списка относятся к «Сегодня»
+      state.folders.forEach(f => { if (!f.listId) f.listId = 'today'; });
       state.groups = parsed.groups || [];
       state.tags = parsed.tags || [];
    if (parsed.systemListsConfig) {
@@ -1039,7 +1041,13 @@ function folderHTML(folder, viewTasks) {
 }
 
 function addFolder() {
-  state.folders.push({ id: uid(), name: 'Папка ' + (state.folders.length + 1), collapsed: false });
+  // папки рендерятся в общих списках (сегодня/завтра/все/входящие/группы/даты)
+  if (['done', 'scheduled', 'overdue'].includes(state.activeGroupId)) {
+    toast('Папки доступны в списках Сегодня, Завтра, Все дела, Входящие, группах и датах', 'info');
+    return;
+  }
+  // у каждого списка — свой набор папок
+  state.folders.push({ id: uid(), name: 'Папка ' + (state.folders.filter(f => f.listId === state.activeGroupId).length + 1), collapsed: false, listId: state.activeGroupId });
   saveState(); render();
   toast('Папка создана — перетащите в неё дела и задайте название', 'info');
 }
@@ -1224,12 +1232,13 @@ function renderTasks() {
       });
     }
   } else {
-    // корень — дела без папки; папки рендерятся после основного списка
+    // корень — дела без папки; папки текущего списка рендерятся после основного списка
+    const scopeFolders = state.folders.filter(f => f.listId === state.activeGroupId);
     const rootTasks = tasks.filter(t => !t.folderId);
     const rootDeal = rootTasks.find(t => t.id === state.dealOfDayId && !t.done);
     const rootActiveCount = rootTasks.filter(t => !t.done && t.id !== state.dealOfDayId).length;
-    const foldersHTML = state.folders.map(f => folderHTML(f, tasks)).join('');
-    const anyFolderActive = state.folders.some(f => tasks.some(t => t.folderId === f.id && !t.done));
+    const foldersHTML = scopeFolders.map(f => folderHTML(f, tasks)).join('');
+    const anyFolderActive = scopeFolders.some(f => tasks.some(t => t.folderId === f.id && !t.done));
     let doneTasks = tasks.filter(t => t.done);
 
     if (state.filter === 'active') {
