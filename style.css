@@ -587,7 +587,7 @@ body[data-theme="light"] .task-due-date-badge i { color: var(--fg-dim); opacity:
 
 .task-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.2s; flex-shrink: 0; }
 .task:hover .task-actions, .task:focus-within .task-actions, .task.is-focusing .task-actions, .task.is-deal .task-actions { opacity: 1; }
-.icon-btn { background: transparent; border: 1px solid transparent; color: var(--task-color, var(--fg-dim)); width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 15px; padding: 0; opacity: 0.7; }
+.icon-btn { background: transparent; border: 1px solid transparent; color: var(--task-color, var(--fg-dim)); width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 22px; padding: 0; opacity: 0.7; }
 .icon-btn:hover { opacity: 1; background: var(--bg-input-active); border-color: color-mix(in srgb, var(--task-color, #fff) 30%, transparent); }
 .icon-btn.active { opacity: 1; background: color-mix(in srgb, var(--task-color, #fff) 15%, transparent); border-color: color-mix(in srgb, var(--task-color, #fff) 40%, transparent); }
 .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); background: rgba(251, 113, 133, 0.1); }
