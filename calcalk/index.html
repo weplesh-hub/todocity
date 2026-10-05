@@ -144,9 +144,12 @@
 
     <div class="card" id="accountCard" style="display:none">
       <h3 class="card-title">👤 Аккаунт</h3>
-      <p class="hint" style="margin:0 0 8px">Единый аккаунт с TODOCITY. Вход и выход — в настройках TODOCITY.</p>
-      <p style="margin:0;font-weight:700"><span id="accountName"></span></p>
-      <p class="hint" style="margin:6px 0 0"><a href="../" style="color:inherit">← Перейти в TODOCITY</a></p>
+      <p class="hint" style="margin:0 0 8px">Единый аккаунт с TODOCITY — дневник синхронизируется с сервером. Вход и выход — в настройках TODOCITY.</p>
+      <p style="margin:0;font-weight:700"><span id="accountName"></span> · <span id="accountSyncStatus" style="font-weight:400;opacity:.7"></span></p>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn" id="ccSyncBtn">⟳ Синхронизировать</button>
+        <a class="btn" href="../" style="text-decoration:none">← В TODOCITY</a>
+      </div>
     </div>
 
     <div class="card">
@@ -195,6 +198,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=1"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

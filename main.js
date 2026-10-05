@@ -2695,6 +2695,9 @@ async function doSyncLogout() {
   localStorage.removeItem(SYNCED_AT_KEY);
   // локальные данные принадлежат аккаунту — не оставляем их на устройстве без авторизации
   localStorage.removeItem(STORAGE_KEY);
+  // и дневник КалКалка тоже (единый аккаунт на оба приложения)
+  localStorage.removeItem('calcalk_v1');
+  localStorage.removeItem('calcalk-synced-at');
   location.reload();
 }
 

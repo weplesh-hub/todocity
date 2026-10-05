@@ -21,6 +21,7 @@ import sys
 import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse, parse_qs
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data.db')
 PORT = int(os.environ.get('PORT', '8080'))
@@ -28,6 +29,8 @@ TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000        # 30 дней
 PBKDF2_ITERS = 120_000
 MAX_BODY = 5 * 1024 * 1024                      # 5 МБ на состояние
 LOGIN_RE = re.compile(r'^[a-zA-Z0-9_.-]{3,32}$')
+# Слоты состояний: у одного аккаунта — отдельное состояние на каждое приложение
+APPS = {'todo', 'calcalk'}
 # Разрешённые источники фронтенда (localhost для разработки, GitHub Pages, сам VPS)
 ORIGIN_RE = re.compile(
     r'^https?://(localhost|127\.0\.0\.1)(:\d+)?$'
@@ -59,10 +62,26 @@ def init_db():
             pass_hash TEXT NOT NULL,
             token TEXT,
             token_ts INTEGER)''')
-        c.execute('''CREATE TABLE IF NOT EXISTS states (
-            user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-            data TEXT,
-            updated_at INTEGER)''')
+        # Миграция: прежняя схема states (один слот на аккаунт) → слоты по приложениям
+        has_states = c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='states'").fetchone()
+        cols = [r[1] for r in c.execute('PRAGMA table_info(states)').fetchall()] if has_states else []
+        if cols and 'app' not in cols:
+            c.execute('ALTER TABLE states RENAME TO states_old')
+            c.execute('''CREATE TABLE states (
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                app TEXT NOT NULL DEFAULT 'todo',
+                data TEXT,
+                updated_at INTEGER,
+                PRIMARY KEY (user_id, app))''')
+            c.execute("INSERT INTO states (user_id, app, data, updated_at) SELECT user_id, 'todo', data, updated_at FROM states_old")
+            c.execute('DROP TABLE states_old')
+        else:
+            c.execute('''CREATE TABLE IF NOT EXISTS states (
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                app TEXT NOT NULL DEFAULT 'todo',
+                data TEXT,
+                updated_at INTEGER,
+                PRIMARY KEY (user_id, app))''')
         c.execute('''CREATE TABLE IF NOT EXISTS sessions (
             token TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -192,15 +211,24 @@ class ApiHandler(BaseHTTPRequestHandler):
             self.send_header(k, v)
         self.end_headers()
 
+    # Слот приложения из query: /api/state?app=todo|calcalk (по умолчанию todo)
+    def state_app(self):
+        app = (parse_qs(urlparse(self.path).query).get('app') or ['todo'])[0]
+        return app if app in APPS else None
+
     def handle_get(self):
-        if self.path == '/api/ping':
+        if self.path.split('?')[0] == '/api/ping':
             return self.send_json(200, {'ok': True, 'service': 'todocity'})
-        if self.path == '/api/state':
+        if self.path.split('?')[0] == '/api/state':
             user = self.auth_user()
             if not user:
                 return self.send_json(401, {'error': 'не авторизован'})
+            app = self.state_app()
+            if not app:
+                return self.send_json(400, {'error': 'неизвестное приложение'})
             with db() as c:
-                row = c.execute('SELECT data, updated_at FROM states WHERE user_id = ?', (user['id'],)).fetchone()
+                row = c.execute('SELECT data, updated_at FROM states WHERE user_id = ? AND app = ?',
+                                (user['id'], app)).fetchone()
             if not row or row['data'] is None:
                 return self.send_json(200, {'state': None, 'updated_at': None})
             return self.send_json(200, {'state': json.loads(row['data']), 'updated_at': row['updated_at']})
@@ -249,10 +277,13 @@ class ApiHandler(BaseHTTPRequestHandler):
         return self.send_json(404, {'error': 'not found'})
 
     def handle_put(self):
-        if self.path == '/api/state':
+        if self.path.split('?')[0] == '/api/state':
             user = self.auth_user()
             if not user:
                 return self.send_json(401, {'error': 'не авторизован'})
+            app = self.state_app()
+            if not app:
+                return self.send_json(400, {'error': 'неизвестное приложение'})
             try:
                 data = self.read_json()
             except ValueError as e:
@@ -261,9 +292,9 @@ class ApiHandler(BaseHTTPRequestHandler):
                 return self.send_json(400, {'error': 'state должен быть объектом'})
             now = int(time.time() * 1000)
             with db() as c:
-                c.execute('''INSERT INTO states (user_id, data, updated_at) VALUES (?, ?, ?)
-                             ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at''',
-                          (user['id'], json.dumps(data, ensure_ascii=False), now))
+                c.execute('''INSERT INTO states (user_id, app, data, updated_at) VALUES (?, ?, ?, ?)
+                             ON CONFLICT(user_id, app) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at''',
+                          (user['id'], app, json.dumps(data, ensure_ascii=False), now))
             return self.send_json(200, {'updated_at': now})
         return self.send_json(404, {'error': 'not found'})
 

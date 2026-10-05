@@ -159,6 +159,7 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  ccSchedulePush();
 }
 
 function day(dateISO, create) {
@@ -477,15 +478,9 @@ function init() {
   el('#inAim').innerHTML = AIM.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
   el('#foodMeal').innerHTML = MEALS.map((m) => '<option value="' + m.id + '">' + m.icon + ' ' + m.label + '</option>').join('');
 
-  // Единый аккаунт с TODOCITY (общий origin — общий localStorage)
-  try {
-    var acc = localStorage.getItem('todo-app-v47-login');
-    var accToken = localStorage.getItem('todo-app-v47-token');
-    if (acc && accToken) {
-      var card = el('#accountCard');
-      if (card) { card.style.display = ''; el('#accountName').textContent = acc; }
-    }
-  } catch (e) { /* приватный режим и т.п. */ }
+  // Кнопка синхронизации в карточке аккаунта
+  var ccSyncBtn = document.getElementById('ccSyncBtn');
+  if (ccSyncBtn) ccSyncBtn.addEventListener('click', ccSyncNow);
 
   // Приём пищи по умолчанию — по времени суток
   const h = new Date().getHours();
@@ -696,6 +691,129 @@ function init() {
 
   // Первый показ
   renderDiary();
+
+  // Синхронизация с общим аккаунтом TODOCITY
+  ccStartupSync();
+}
+
+/* ===== СИНХРОНИЗАЦИЯ (единый аккаунт с TODOCITY, слот calcalk на сервере) ===== */
+var CC_TOKEN_KEY = 'todo-app-v47-token';
+var CC_LOGIN_KEY = 'todo-app-v47-login';
+var CC_SYNCED_AT = 'calcalk-synced-at';
+var CC_API_BASE = (location.host === '104.171.138.209') ? '/api' : 'http://104.171.138.209/api';
+var ccPushTimer = null;
+var ccSyncing = false;
+
+function ccToken() {
+  try { return localStorage.getItem(CC_TOKEN_KEY) || null; } catch (e) { return null; }
+}
+
+function ccApi(method, path, body) {
+  var headers = {};
+  var t = ccToken();
+  if (t) headers.Authorization = 'Bearer ' + t;
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  return fetch(CC_API_BASE + path, {
+    method: method, headers: headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  }).then(function (res) {
+    return res.json().catch(function () { return {}; }).then(function (data) {
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      return data;
+    });
+  });
+}
+
+// Автоотправка через 1.2с после каждого сохранения (как в TODOCITY)
+function ccSchedulePush() {
+  if (!ccToken() || ccSyncing) return;
+  clearTimeout(ccPushTimer);
+  ccPushTimer = setTimeout(function () { ccPush().catch(function () {}); }, 1200);
+}
+
+function ccPush() {
+  if (!ccToken()) return Promise.resolve();
+  return ccApi('PUT', '/state?app=calcalk', state).then(function (res) {
+    try { localStorage.setItem(CC_SYNCED_AT, String(res.updated_at || Date.now())); } catch (e) {}
+    ccRenderAccount();
+  });
+}
+
+function ccPull(silent) {
+  if (!ccToken()) return Promise.resolve(false);
+  return ccApi('GET', '/state?app=calcalk').then(function (data) {
+    var last = 0;
+    try { last = Number(localStorage.getItem(CC_SYNCED_AT) || 0); } catch (e) {}
+    if (data.state && data.updated_at && data.updated_at > last + 1000) {
+      ccApply(data.state);
+      try { localStorage.setItem(CC_SYNCED_AT, String(data.updated_at)); } catch (e) {}
+      if (!silent) toast('Данные загружены с сервера');
+      return true;
+    }
+    if (!silent) toast(data.state ? 'Локальные данные не старше серверных' : 'На сервере пусто — отправим эти данные');
+    return false;
+  });
+}
+
+function ccApply(srv) {
+  if (!srv || typeof srv !== 'object' || !srv.days) return;
+  ccSyncing = true;
+  try {
+    state = {
+      settings: {
+        ...DEFAULTS,
+        ...(srv.settings || {}),
+        profile: { ...DEFAULTS.profile, ...((srv.settings || {}).profile || {}) }
+      },
+      days: srv.days
+    };
+    saveState(); // флаг ccSyncing не даст тут же отправить обратно
+    applyTheme(state.settings.theme || 'light');
+    viewDate = todayISO();
+    renderDiary();
+    renderSettings();
+    if (!document.getElementById('view-history').classList.contains('hidden')) renderHistory();
+  } finally {
+    setTimeout(function () { ccSyncing = false; }, 100);
+  }
+}
+
+// Старт: сервер новее — тянем его; иначе — поднимаем туда локальные данные
+function ccStartupSync() {
+  ccRenderAccount();
+  if (!ccToken()) return;
+  ccPull(true).then(function (pulled) {
+    if (!pulled) return ccPush().catch(function () {});
+  }).catch(function () { /* офлайн — работаем локально */ });
+}
+
+// Кнопка «Синхронизировать» в карточке аккаунта настроек
+function ccSyncNow() {
+  if (!ccToken()) { toast('Войдите в аккаунт в TODOCITY'); return; }
+  ccPull(false).then(function (pulled) {
+    if (!pulled) return ccPush();
+  }).catch(function (e) { toast('Ошибка синхронизации: ' + e.message); });
+}
+
+function ccRenderAccount() {
+  var card = document.getElementById('accountCard');
+  if (!card) return;
+  var login = null, token = null;
+  try {
+    login = localStorage.getItem(CC_LOGIN_KEY);
+    token = localStorage.getItem(CC_TOKEN_KEY);
+  } catch (e) {}
+  if (!login || !token) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  document.getElementById('accountName').textContent = login;
+  var at = 0;
+  try { at = Number(localStorage.getItem(CC_SYNCED_AT) || 0); } catch (e) {}
+  var status = document.getElementById('accountSyncStatus');
+  if (status) {
+    status.textContent = at
+      ? 'синхронизировано в ' + new Date(at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      : 'ещё не синхронизировано';
+  }
 }
 
 init();
