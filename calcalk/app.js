@@ -365,17 +365,12 @@ function pickFood(item) {
   el('#suggestBox').innerHTML = '';
   closeSuggest();
   if (!el('#foodGrams').value) el('#foodGrams').value = 100;
-  recalcFromDb();
+  // поля КБЖУ всегда показывают значения НА 100 г; на вес умножаем при сохранении
+  el('#foodKcal').value = item.kcal;
+  el('#foodP').value = item.p;
+  el('#foodF').value = item.f;
+  el('#foodC').value = item.c;
   el('#foodGrams').focus();
-}
-
-function recalcFromDb() {
-  if (!activeFood) return;
-  const k = (parseFloat(el('#foodGrams').value) || 0) / 100;
-  el('#foodKcal').value = Math.round(activeFood.kcal * k);
-  el('#foodP').value = +(activeFood.p * k).toFixed(1);
-  el('#foodF').value = +(activeFood.f * k).toFixed(1);
-  el('#foodC').value = +(activeFood.c * k).toFixed(1);
 }
 
 function buildChips() {
@@ -722,27 +717,31 @@ function init() {
     const it = e.target.closest('.suggest-item');
     if (it) pickFood(FOOD_DB[+it.dataset.i]);
   });
-  el('#foodGrams').addEventListener('input', recalcFromDb);
+  el('#foodGrams').addEventListener('input', () => {}); // граммы не пересчитывают поля — умножение при сохранении
 
   // Добавление еды вручную
   el('#foodForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = el('#foodName').value.trim();
-    const kcal = parseFloat(el('#foodKcal').value);
+    const kcal100 = parseFloat(el('#foodKcal').value); // калории НА 100 г
     if (!name) { toast('Укажите название продукта'); el('#foodName').focus(); return; }
-    if (!isFinite(kcal) || kcal < 0) { toast('Укажите калорийность'); el('#foodKcal').focus(); return; }
+    if (!isFinite(kcal100) || kcal100 < 0) { toast('Укажите калорийность (на 100 г)'); el('#foodKcal').focus(); return; }
     const g = parseFloat(el('#foodGrams').value);
+    const hasG = isFinite(g) && g > 0;
+    const k = hasG ? g / 100 : 1; // без веса — считаем, что введено итоговое значение на порцию
+    const p100 = num(el('#foodP')), f100 = num(el('#foodF')), c100 = num(el('#foodC'));
+    const totalKcal = Math.round(kcal100 * k * 10) / 10;
     day(viewDate, true).foods.push({
       id: uid(),
       name,
-      g: isFinite(g) && g > 0 ? Math.round(g) : null,
-      kcal: Math.round(kcal * 10) / 10,
-      p: num(el('#foodP')), f: num(el('#foodF')), c: num(el('#foodC')),
+      g: hasG ? Math.round(g) : null,
+      kcal: totalKcal,
+      p: +(p100 * k).toFixed(1), f: +(f100 * k).toFixed(1), c: +(c100 * k).toFixed(1),
       meal: el('#foodMeal').value, time: nowTime(),
     });
     saveState();
     renderDiary();
-    toast('Добавлено: ' + name + ' · ' + Math.round(kcal) + ' ккал');
+    toast('Добавлено: ' + name + (hasG ? ' · ' + Math.round(g) + ' г' : '') + ' · ' + Math.round(totalKcal) + ' ккал');
     ['foodName', 'foodGrams', 'foodKcal', 'foodP', 'foodF', 'foodC'].forEach((id) => { el('#' + id).value = ''; });
     activeFood = null;
     closeSuggest();
