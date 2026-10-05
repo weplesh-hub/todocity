@@ -418,6 +418,13 @@ input::placeholder { color: var(--muted); opacity: .7; }
 }
 .chip:hover .chip-edit { opacity: 0.9; }
 .chip-edit:hover { color: var(--accent); }
+/* на сенсорных экранах наведения нет — карандаш виден всегда */
+@media (hover: none) {
+  .chip-edit { opacity: 0.85; }
+}
+/* свои цвета ячейки */
+.chip.custom { border-color: transparent; }
+.chip.custom .chip-sub { opacity: 0.75; }
 
 /* Диалоги быстрых продуктов */
 .qd-overlay {
@@ -434,7 +441,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
 
 .chip {
   padding: 7px 12px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg-inset);
   color: var(--text);

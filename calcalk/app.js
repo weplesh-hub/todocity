@@ -123,13 +123,15 @@ const DEFAULTS = {
   quick: Array.from({ length: 20 }, () => null), // 20 ячеек частых продуктов, КБЖУ на 100 г
 };
 
-// гарантируем массив из 20 корректных ячеек (null или {name,kcal,p,f,c})
+// гарантируем массив из 20 корректных ячеек (null или {name,kcal,p,f,c,bg,fg})
 function normalizeQuick(arr) {
   const out = [];
+  const hex = (v) => (typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)) ? v : null;
   for (let i = 0; i < 20; i++) {
     const it = Array.isArray(arr) ? arr[i] : null;
     out.push(it && typeof it === 'object' && it.name && +it.kcal >= 0
-      ? { name: String(it.name).slice(0, 40), kcal: +it.kcal || 0, p: +it.p || 0, f: +it.f || 0, c: +it.c || 0 }
+      ? { name: String(it.name).slice(0, 40), kcal: +it.kcal || 0, p: +it.p || 0, f: +it.f || 0, c: +it.c || 0,
+          bg: hex(it.bg), fg: hex(it.fg) }
       : null);
   }
   return out;
@@ -377,14 +379,15 @@ function recalcFromDb() {
 }
 
 function buildChips() {
-  el('#quickChips').innerHTML = state.settings.quick.map((it, i) => it
-    ? '<button type="button" class="chip saved" data-chip="' + i + '" title="' + escapeHtml(it.name) + ' · ' + it.kcal + ' ккал/100 г">' +
-        '<span class="chip-name">' + escapeHtml(it.name) + '</span>' +
-        '<span class="chip-sub">' + it.kcal + ' ккал</span>' +
-        '<i class="chip-edit" data-edit="' + i + '" title="Изменить">✎</i>' +
-      '</button>'
-    : '<button type="button" class="chip empty" data-chip="' + i + '" title="Сохранить свой продукт">+</button>'
-  ).join('');
+  el('#quickChips').innerHTML = state.settings.quick.map((it, i) => {
+    if (!it) return '<button type="button" class="chip empty" data-chip="' + i + '" title="Сохранить свой продукт">+</button>';
+    const colors = it.bg ? ' style="background:' + it.bg + ';color:' + (it.fg || 'var(--text)') + '"' : '';
+    return '<button type="button" class="chip saved' + (it.bg ? ' custom' : '') + '" data-chip="' + i + '" title="' + escapeHtml(it.name) + ' · ' + it.kcal + ' ккал/100 г"' + colors + '>' +
+      '<span class="chip-name">' + escapeHtml(it.name) + '</span>' +
+      '<span class="chip-sub">' + it.kcal + ' ккал</span>' +
+      '<i class="chip-edit" data-edit="' + i + '" title="Изменить">✎</i>' +
+    '</button>';
+  }).join('');
 }
 
 /* ---------- Диалоги быстрых продуктов ---------- */
@@ -447,6 +450,11 @@ function quickEditDialog(i) {
   const cur = state.settings.quick[i];
   const num = (id, label, val, step) =>
     '<label>' + label + '<input id="' + id + '" type="number" min="0" step="' + step + '" value="' + (val !== undefined && val !== null ? val : '') + '"></label>';
+  // стартовые цвета пипеток — текущие стандартные темы (по живому чипу) или свои
+  const probe = document.querySelector('.chip.empty') || document.querySelector('.chip');
+  const cs = probe ? getComputedStyle(probe) : null;
+  const defBg = cs ? rgbToHex(cs.backgroundColor) : '#2b3130';
+  const defFg = cs ? rgbToHex(cs.color) : '#e8e6e3';
   const ov = qdOverlay(
     '<h3 class="card-title">✏️ ' + (cur ? 'Изменить продукт' : 'Ячейка ' + (i + 1) + ' из 20') + '</h3>' +
     '<div class="food-grid">' +
@@ -455,24 +463,40 @@ function quickEditDialog(i) {
       num('qeP', 'Белки', cur ? cur.p : '', '0.1') +
       num('qeF', 'Жиры', cur ? cur.f : '', '0.1') +
       num('qeC', 'Углеводы', cur ? cur.c : '', '0.1') +
+      '<label>Цвет ячейки<input id="qeBg" type="color" value="' + (cur && cur.bg ? cur.bg : defBg) + '"></label>' +
+      '<label>Цвет текста<input id="qeFg" type="color" value="' + (cur && cur.fg ? cur.fg : defFg) + '"></label>' +
+      '<label class="span2" style="display:flex;align-items:center;gap:8px;flex-direction:row">' +
+        '<input id="qeCustomColors" type="checkbox" ' + (cur && cur.bg ? 'checked' : '') + ' style="width:auto">' +
+        'Свои цвета ячейки</label>' +
     '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
-      (cur ? '<button class="btn danger" data-act="del">Очистить</button>' : '') +
+      (cur ? '<button class="btn danger" data-act="del">Очистить ячейку</button>' : '') +
       '<button class="btn" data-act="cancel">Отмена</button>' +
       '<button class="btn primary" data-act="save">Сохранить</button>' +
     '</div>');
   const nameIn = ov.querySelector('#qeName');
+  const cbColors = ov.querySelector('#qeCustomColors');
+  [ov.querySelector('#qeBg'), ov.querySelector('#qeFg')].forEach((inp) => {
+    inp.disabled = !cbColors.checked;
+  });
+  cbColors.addEventListener('change', () => {
+    ov.querySelector('#qeBg').disabled = !cbColors.checked;
+    ov.querySelector('#qeFg').disabled = !cbColors.checked;
+  });
   nameIn.focus();
   const save = () => {
     const name = nameIn.value.trim();
     const kcal = +ov.querySelector('#qeKcal').value;
     if (!name || !(kcal >= 0)) { nameIn.focus(); return; }
+    const useColors = cbColors.checked;
     state.settings.quick[i] = {
       name: name,
       kcal: Math.round(kcal),
       p: +(+ov.querySelector('#qeP').value || 0).toFixed(1),
       f: +(+ov.querySelector('#qeF').value || 0).toFixed(1),
       c: +(+ov.querySelector('#qeC').value || 0).toFixed(1),
+      bg: useColors ? ov.querySelector('#qeBg').value : null,
+      fg: useColors ? ov.querySelector('#qeFg').value : null,
     };
     saveState(); buildChips(); ov.remove();
     toast('Ячейка ' + (i + 1) + ': ' + name);
@@ -491,6 +515,13 @@ function quickEditDialog(i) {
       toast('Ячейка ' + (i + 1) + ' очищена');
     } else ov.remove();
   });
+}
+
+// rgb(43, 49, 48) → #2b3130 (для стартовых значений пипеток)
+function rgbToHex(rgb) {
+  const m = /(\d+)[, ]+(\d+)[, ]+(\d+)/.exec(rgb || '');
+  if (!m) return '#2b3130';
+  return '#' + [1, 2, 3].map((j) => (+m[j]).toString(16).padStart(2, '0')).join('');
 }
 
 /* ---------- История ---------- */
