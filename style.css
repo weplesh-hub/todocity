@@ -945,6 +945,11 @@ body[data-theme="light"] input[type="time"].edit-input { color-scheme: light; }
   .filter-btn { padding: 7px 10px; font-size: 11px; }
   .card { padding: 16px; }
   .tasks-title-wrap { flex-wrap: wrap; }
+  /* текст дела — во всю ширину, кнопки — отдельной строкой справа */
+  .task-actions { order: 3; flex-basis: 100%; justify-content: flex-end; }
+  /* на сенсорных экранах нет наведения — кнопки видимы всегда */
+  .task-actions { opacity: 0.85; }
+  .task-text { font-size: 15px; overflow-wrap: anywhere; }
 }
 
 ::-webkit-scrollbar { width: 8px; }
