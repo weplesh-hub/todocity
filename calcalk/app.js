@@ -468,6 +468,7 @@ function quickEditDialog(i) {
       '<label class="span2" style="display:flex;align-items:center;gap:8px;flex-direction:row">' +
         '<input id="qeCustomColors" type="checkbox" ' + (cur && cur.bg ? 'checked' : '') + ' style="width:auto">' +
         'Свои цвета ячейки</label>' +
+      '<div class="span2 qe-preview-wrap">Предпросмотр: <div id="qePreview" class="chip saved"><span class="chip-name"></span><span class="chip-sub"></span></div></div>' +
     '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
       (cur ? '<button class="btn danger" data-act="del">Очистить ячейку</button>' : '') +
@@ -476,13 +477,56 @@ function quickEditDialog(i) {
     '</div>');
   const nameIn = ov.querySelector('#qeName');
   const cbColors = ov.querySelector('#qeCustomColors');
-  [ov.querySelector('#qeBg'), ov.querySelector('#qeFg')].forEach((inp) => {
-    inp.disabled = !cbColors.checked;
-  });
+  const bgIn = ov.querySelector('#qeBg');
+  const fgIn = ov.querySelector('#qeFg');
+  [bgIn, fgIn].forEach((inp) => { inp.disabled = !cbColors.checked; });
   cbColors.addEventListener('change', () => {
-    ov.querySelector('#qeBg').disabled = !cbColors.checked;
-    ov.querySelector('#qeFg').disabled = !cbColors.checked;
+    bgIn.disabled = !cbColors.checked;
+    fgIn.disabled = !cbColors.checked;
+    updatePreview();
   });
+
+  // Живой предпросмотр: плитка в диалоге + сама ячейка в сетке перекрашиваются сразу
+  function updatePreview() {
+    const useColors = cbColors.checked;
+    const name = nameIn.value.trim() || 'Продукт';
+    const kcal = ov.querySelector('#qeKcal').value || '0';
+    const bg = useColors ? bgIn.value : null;
+    const fg = useColors ? fgIn.value : null;
+    // плитка-образец в диалоге
+    const pv = ov.querySelector('#qePreview');
+    pv.querySelector('.chip-name').textContent = name;
+    pv.querySelector('.chip-sub').textContent = kcal + ' ккал';
+    if (bg) {
+      pv.style.background = bg;
+      pv.style.color = fg || 'var(--text)';
+      pv.classList.add('custom');
+    } else {
+      pv.style.background = '';
+      pv.style.color = '';
+      pv.classList.remove('custom');
+    }
+    // и ячейка в сетке позади диалога — сразу видно результат
+    const chipEl = document.querySelector('#quickChips .chip[data-chip="' + i + '"]');
+    if (chipEl && chipEl.classList.contains('saved')) {
+      if (bg) {
+        chipEl.style.background = bg;
+        chipEl.style.color = fg || 'var(--text)';
+        chipEl.classList.add('custom');
+      } else {
+        chipEl.style.background = '';
+        chipEl.style.color = '';
+        chipEl.classList.remove('custom');
+      }
+    }
+  }
+  [nameIn, ov.querySelector('#qeKcal'), bgIn, fgIn].forEach((inp) => {
+    inp.addEventListener('input', updatePreview);
+  });
+  updatePreview();
+
+  // отмена — вернуть ячейке сохранённые цвета
+  const cancelPreview = () => buildChips();
   nameIn.focus();
   const save = () => {
     const name = nameIn.value.trim();
@@ -503,9 +547,10 @@ function quickEditDialog(i) {
   };
   nameIn.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); save(); }
-    if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelPreview(); ov.remove(); }
   });
   ov.addEventListener('click', (e) => {
+    if (e.target === ov) { cancelPreview(); }
     const act = e.target.closest('[data-act]');
     if (!act) return;
     if (act.dataset.act === 'save') save();
@@ -513,7 +558,7 @@ function quickEditDialog(i) {
       state.settings.quick[i] = null;
       saveState(); buildChips(); ov.remove();
       toast('Ячейка ' + (i + 1) + ' очищена');
-    } else ov.remove();
+    } else { cancelPreview(); ov.remove(); }
   });
 }
 
