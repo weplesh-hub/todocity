@@ -23,7 +23,7 @@ index.html + styles.css + app.js, localStorage `calcalk_v1`)**. Приложен
 1. **Версионирование ресурсов.** При ЛЮБОЙ правке `style.css` или `main.js` поднять версию
    в ссылках `index.html`: `style.css?v=N`, `main.js?v=N`. Иначе браузер (в т.ч. встроенный
    IAB) отдаёт кешированную старую версию. Текущие версии (сверено 05.10.2026): **style.css?v=43,
-   main.js?v=44**; calcalk: styles.css?v=6, app.js?v=6.
+   main.js?v=45**; calcalk: styles.css?v=6, app.js?v=6.
 2. **Формат дат.** Хранить даты только как локальную полночь: хелпер `localMidnightISO(d)`.
    Никогда не использовать `toISOString().split('T')[0]` — это UTC, даёт смещение на день
    в таймзонах восточнее UTC. Для полей `<input type="date">` — хелпер `toLocalISODate(d)`.
@@ -41,8 +41,10 @@ index.html + styles.css + app.js, localStorage `calcalk_v1`)**. Приложен
 - `server.py` — бэкенд на чистом stdlib (http.server + sqlite3), развёрнут на VPS:
   /srv/todocity-backend, systemd-сервис `todocity-backend`, слушает 127.0.0.1:8080,
   nginx проксирует `/api/` наружу. База: /srv/todocity-backend/data.db.
-- API: POST /api/register|login|logout, GET/PUT /api/state, GET /api/ping.
-  Пароли PBKDF2, токены Bearer 30 дней. CORS-allowlist: localhost/127.0.0.1, VPS-адрес,
+- API: POST /api/register|login|logout|password, GET/PUT /api/state, GET /api/ping.
+  Пароли PBKDF2, токены Bearer 30 дней. POST /api/password (Bearer, {old,new}) — смена пароля;
+  неверный старый → 403 (НЕ 401 — иначе фронт роняет сессию), сессии при смене сохраняются.
+  Кнопка «Сменить пароль» — в настройках аккаунта (диалог showPasswordDialog, main.js). CORS-allowlist: localhost/127.0.0.1, VPS-адрес,
   weplesh-hub.github.io (обновляется в ORIGIN_RE и в API_BASE в main.js).
 - Фронтенд: раздел «Аккаунт и синхронизация» в настройках. Автопуш через 1.2с после
   saveState (флаг `syncing` защищает от цикла), автозагрузка при старте — только если

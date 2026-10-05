@@ -266,6 +266,25 @@ class ApiHandler(BaseHTTPRequestHandler):
                 return self.send_json(401, {'error': 'неверный логин или пароль'})
             return self.send_json(200, {'token': issue_token(row['id']), 'login': login})
 
+        if self.path == '/api/password':
+            user = self.auth_user()
+            if not user:
+                return self.send_json(401, {'error': 'не авторизован'})
+            try:
+                data = self.read_json()
+            except ValueError as e:
+                return self.send_json(400, {'error': str(e)})
+            old, new = str(data.get('old', '')), str(data.get('new', ''))
+            if len(new) < 6:
+                return self.send_json(400, {'error': 'новый пароль: минимум 6 символов'})
+            with db() as c:
+                row = c.execute('SELECT pass_hash FROM users WHERE id = ?', (user['id'],)).fetchone()
+                # 403 (не 401): неверный старый пароль не должен ронять сессию на фронтенде
+                if not row or not check_password(old, row['pass_hash']):
+                    return self.send_json(403, {'error': 'текущий пароль неверен'})
+                c.execute('UPDATE users SET pass_hash = ? WHERE id = ?', (hash_password(new), user['id']))
+            return self.send_json(200, {'ok': True})
+
         if self.path == '/api/logout':
             # закрываем только текущую сессию, другие устройства остаются в системе
             header = self.headers.get('Authorization', '')

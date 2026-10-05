@@ -2543,6 +2543,7 @@ function updateSyncUI() {
       <div class="sync-status">${lastSync ? syncTimeText(lastSync) : 'ещё не синхронизировано'}</div>
       <div class="sync-actions">
         <button class="mini-btn mini-btn-save" data-action="sync-now">Синхронизировать</button>
+        <button class="mini-btn mini-btn-cancel" data-action="sync-password">Сменить пароль</button>
         <button class="mini-btn mini-btn-cancel" data-action="sync-logout">Выйти</button>
       </div>`;
   } else {
@@ -2686,6 +2687,63 @@ async function doSyncToolbar() {
   }
 }
 
+// Диалог смены пароля (в настройках, для залогиненного аккаунта)
+function showPasswordDialog() {
+  const oldDlg = document.getElementById('passwordModal');
+  if (oldDlg) oldDlg.remove();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'passwordModal';
+  overlay.style.zIndex = '1000';
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Смена пароля · ${escapeHtml(syncLoginName)}</h2>
+        <button class="modal-close" data-act="close"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div style="padding: 6px 0 4px; display: flex; flex-direction: column; gap: 10px;">
+        <input type="password" id="pwOld" class="input-text" placeholder="Текущий пароль" autocomplete="current-password">
+        <input type="password" id="pwNew" class="input-text" placeholder="Новый пароль (минимум 6 символов)" autocomplete="new-password">
+        <input type="password" id="pwNew2" class="input-text" placeholder="Повторите новый пароль" autocomplete="new-password">
+        <div class="sync-error" id="pwError" style="display:none"></div>
+      </div>
+      <div class="note-modal-footer">
+        <button class="btn-cancel" data-act="close">Отмена</button>
+        <button class="btn-save" data-act="save"><i class="fa-solid fa-key"></i> Сменить пароль</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+  document.body.appendChild(overlay);
+  const errEl = overlay.querySelector('#pwError');
+  const showErr = (msg) => { errEl.textContent = msg; errEl.style.display = 'block'; };
+  overlay.querySelector('#pwOld').focus();
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); overlay.remove(); }
+    if (e.key === 'Enter') { e.preventDefault(); overlay.querySelector('[data-act="save"]').click(); }
+  });
+  overlay.addEventListener('click', async (e) => {
+    if (e.target === overlay) { overlay.remove(); return; }
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (!act) return;
+    if (act === 'close') { overlay.remove(); return; }
+    if (act === 'save') {
+      const o = overlay.querySelector('#pwOld').value;
+      const n = overlay.querySelector('#pwNew').value;
+      const n2 = overlay.querySelector('#pwNew2').value;
+      if (!o) { showErr('Введите текущий пароль'); return; }
+      if (n.length < 6) { showErr('Новый пароль: минимум 6 символов'); return; }
+      if (n !== n2) { showErr('Новые пароли не совпадают'); return; }
+      try {
+        await apiCall('POST', '/password', { old: o, new: n });
+        overlay.remove();
+        toast('Пароль изменён', 'success');
+      } catch (err) {
+        showErr(err.message ? err.message.charAt(0).toUpperCase() + err.message.slice(1) : 'Не удалось изменить пароль');
+      }
+    }
+  });
+}
+
 async function doSyncLogout() {
   try { await apiCall('POST', '/logout'); } catch (e) { /* даже если не вышло — разлогиниваемся локально */ }
   syncToken = null;
@@ -2793,6 +2851,7 @@ document.addEventListener('click', (e) => {
     case 'sync-register': doSyncAuth('register'); break;
     case 'sync-logout': doSyncLogout(); break;
     case 'sync-now': doSyncNow(); break;
+    case 'sync-password': showPasswordDialog(); break;
     case 'sync-toolbar': doSyncToolbar(); break;
     case 'open-share': openShareModal(); break;
     case 'copy-share-html': copyShareHtml(); break;
