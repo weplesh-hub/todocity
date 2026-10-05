@@ -344,21 +344,52 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .water-custom { display: flex; gap: 8px; flex: 1; min-width: 150px; }
 .water-custom input { flex: 1; }
 
-.water-log { display: flex; flex-wrap: wrap; gap: 6px; }
+.water-log { display: flex; flex-direction: column; gap: 6px; }
 
-.water-chip {
+/* Сворачиваемый список записей воды */
+.water-log-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: rgba(59, 158, 255, .1);
-  color: var(--water);
-  font-size: 13px;
-  font-weight: 600;
+  gap: 7px;
+  align-self: flex-start;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 3px 0;
 }
-
-[data-theme="dark"] .water-chip { background: rgba(84, 173, 255, .14); }
+.water-log-toggle:hover { color: var(--text); }
+.water-log-toggle .chev { font-style: normal; font-size: 10px; transition: transform 0.2s; }
+.water-log-toggle.open .chev { transform: rotate(90deg); }
+.water-rows { display: flex; flex-direction: column; gap: 5px; }
+.water-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-inset);
+  font-size: 13px;
+}
+.water-time { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 44px; }
+.water-ml { font-weight: 700; color: var(--water); flex: 1; }
+.water-del {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.water-del:hover { color: var(--danger); background: rgba(239, 68, 68, .1); }
 
 .chip-del {
   border: none;

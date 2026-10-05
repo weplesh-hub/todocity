@@ -328,14 +328,28 @@ function macroRow(label, val, target, color, title) {
     '</div>';
 }
 
+// Лог воды — аккуратный список, по умолчанию свёрнут
+let waterLogExpanded = false;
 function renderWaterLog() {
   const w = (state.days[viewDate] || {}).water || [];
-  el('#waterLog').innerHTML = w.length
-    ? w.map((x) =>
-        '<span class="water-chip">' + x.ml + ' мл · ' + escapeHtml(x.time || '') +
-        ' <button class="chip-del" data-act="water" data-id="' + x.id + '" title="Удалить">×</button></span>'
-      ).join('')
-    : '<span class="empty inline">Записи о выпитой воде появятся здесь.</span>';
+  const box = el('#waterLog');
+  if (!w.length) {
+    box.innerHTML = '<span class="empty inline">Записи о выпитой воде появятся здесь.</span>';
+    return;
+  }
+  const total = w.reduce((s, x) => s + (+x.ml || 0), 0);
+  let html = '<button type="button" class="water-log-toggle' + (waterLogExpanded ? ' open' : '') + '" data-act="toggle-water-log">' +
+    '<i class="chev">▸</i> Записи · ' + w.length + ' · ' + total + ' мл</button>';
+  if (waterLogExpanded) {
+    html += '<div class="water-rows">' + w.map((x) =>
+      '<div class="water-row">' +
+        '<span class="water-time">' + escapeHtml(x.time || '') + '</span>' +
+        '<span class="water-ml">' + x.ml + ' мл</span>' +
+        '<button class="water-del" data-act="water" data-id="' + x.id + '" title="Удалить">×</button>' +
+      '</div>'
+    ).join('') + '</div>';
+  }
+  box.innerHTML = html;
 }
 
 function renderMeals() {
@@ -887,6 +901,13 @@ function init() {
 
   // Удаление записей и закрытие подсказок (делегирование)
   document.addEventListener('click', (e) => {
+    // сворачивание/разворачивание лога воды — до общего блока: он делает return для любых [data-act]
+    const wlToggle = e.target.closest('[data-act="toggle-water-log"]');
+    if (wlToggle) {
+      waterLogExpanded = !waterLogExpanded;
+      renderWaterLog();
+      return;
+    }
     const act = e.target.closest('[data-act]');
     if (act) {
       const d = state.days[viewDate];
