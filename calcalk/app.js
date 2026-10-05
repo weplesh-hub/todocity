@@ -123,10 +123,11 @@ const DEFAULTS = {
   quick: Array.from({ length: 20 }, () => null), // 20 ячеек частых продуктов, КБЖУ на 100 г
   dbOver: {},     // правки базовых продуктов: { "Имя из базы": {kcal,p,f,c} }
   dbCustom: [],   // свои продукты: [{name,kcal,p,f,c}]
+  dbHidden: [],   // скрытые (удалённые) базовые продукты: [имя]
 };
 
 // базовые продукты с правками пользователя + его собственные
-function normalizeDb(over, custom) {
+function normalizeDb(over, custom, hidden) {
   const o = {};
   if (over && typeof over === 'object') {
     Object.keys(over).forEach((k) => {
@@ -144,12 +145,16 @@ function normalizeDb(over, custom) {
       }
     });
   }
-  return { dbOver: o, dbCustom: cu };
+  const hi = Array.isArray(hidden) ? hidden.filter((n) => typeof n === 'string' && FOOD_DB.some((f) => f.name === n)) : [];
+  return { dbOver: o, dbCustom: cu, dbHidden: hi };
 }
 
 function getFoodDB() {
   const over = state.settings.dbOver || {};
-  const base = FOOD_DB.map((f) => (over[f.name] ? Object.assign({}, f, over[f.name], { edited: true }) : f));
+  const hidden = state.settings.dbHidden || [];
+  const base = FOOD_DB
+    .filter((f) => !hidden.includes(f.name))
+    .map((f) => (over[f.name] ? Object.assign({}, f, over[f.name], { edited: true }) : f));
   const custom = (state.settings.dbCustom || []).map((f) => Object.assign({}, f, { custom: true }));
   return base.concat(custom);
 }
@@ -179,7 +184,7 @@ function loadState() {
       const data = JSON.parse(raw);
       if (data && typeof data === 'object' && data.days) {
         const s = data.settings || {};
-        const db = normalizeDb(s.dbOver, s.dbCustom);
+        const db = normalizeDb(s.dbOver, s.dbCustom, s.dbHidden);
         return {
           settings: {
             ...DEFAULTS,
@@ -188,6 +193,7 @@ function loadState() {
             quick: normalizeQuick(s.quick),
             dbOver: db.dbOver,
             dbCustom: db.dbCustom,
+            dbHidden: db.dbHidden,
           },
           days: data.days,
         };
@@ -724,6 +730,17 @@ function renderProducts() {
         '</div>';
       }).join('')
     : '<div class="empty">Ничего не найдено 🔍</div>';
+  // скрытые базовые продукты — восстановление
+  const hidden = state.settings.dbHidden || [];
+  if (hidden.length) {
+    el('#dbList').innerHTML += '<div class="db-hidden-head">Удалённые из базы (' + hidden.length + '):</div>' +
+      hidden.map((n) =>
+        '<div class="db-row hidden-row">' +
+          '<span class="db-name">' + escapeHtml(n) + '</span>' +
+          '<button type="button" class="db-restore" data-restore="' + escapeHtml(n) + '" title="Вернуть в базу">↩ Вернуть</button>' +
+        '</div>'
+      ).join('');
+  }
 }
 
 // Диалог правки/добавления продукта (на 100 г). idx = индекс в getFoodDB() или null для нового
@@ -745,7 +762,7 @@ function dbEditDialog(idx) {
     '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
       (cur && !isCustom && state.settings.dbOver[origName] ? '<button class="btn" data-act="reset">Сбросить правку</button>' : '') +
-      (isCustom ? '<button class="btn danger" data-act="del">Удалить</button>' : '') +
+      '<button class="btn danger" data-act="del">Удалить</button>' +
       '<button class="btn" data-act="clear">Очистить</button>' +
       '<button class="btn" data-act="cancel">Отмена</button>' +
       '<button class="btn primary" data-act="save">Сохранить</button>' +
@@ -794,9 +811,17 @@ function dbEditDialog(idx) {
       nameIn.focus();
     }
     else if (act.dataset.act === 'del') {
-      state.settings.dbCustom = state.settings.dbCustom.filter((x) => x.name !== origName);
-      saveState(); renderProducts(); ov.remove();
-      toast('Продукт удалён из базы');
+      if (isCustom) {
+        state.settings.dbCustom = state.settings.dbCustom.filter((x) => x.name !== origName);
+        saveState(); renderProducts(); ov.remove();
+        toast('Продукт удалён из базы');
+      } else {
+        // базовый продукт — скрываем из базы (восстановление внизу списка)
+        state.settings.dbHidden = (state.settings.dbHidden || []).concat([origName]);
+        delete state.settings.dbOver[origName]; // правка больше не нужна
+        saveState(); renderProducts(); ov.remove();
+        toast('«' + origName + '» удалён из базы — вернуть можно внизу списка');
+      }
     } else if (act.dataset.act === 'reset') {
       delete state.settings.dbOver[origName];
       saveState(); renderProducts(); ov.remove();
@@ -830,7 +855,13 @@ function init() {
   el('#dbAddBtn').addEventListener('click', () => dbEditDialog(null));
   el('#dbList').addEventListener('click', (e) => {
     const b = e.target.closest('.db-edit');
-    if (b) dbEditDialog(+b.dataset.i);
+    if (b) { dbEditDialog(+b.dataset.i); return; }
+    const r = e.target.closest('.db-restore');
+    if (r) {
+      state.settings.dbHidden = (state.settings.dbHidden || []).filter((n) => n !== r.dataset.restore);
+      saveState(); renderProducts();
+      toast('«' + r.dataset.restore + '» возвращён в базу');
+    }
   });
 
   // Тема
@@ -1114,9 +1145,10 @@ function ccApply(srv) {
       },
       days: srv.days
     };
-    var dbSrv = normalizeDb((srv.settings || {}).dbOver, (srv.settings || {}).dbCustom);
+    var dbSrv = normalizeDb((srv.settings || {}).dbOver, (srv.settings || {}).dbCustom, (srv.settings || {}).dbHidden);
     state.settings.dbOver = dbSrv.dbOver;
     state.settings.dbCustom = dbSrv.dbCustom;
+    state.settings.dbHidden = dbSrv.dbHidden;
     saveState(); // флаг ccSyncing не даст тут же отправить обратно
     applyTheme(state.settings.theme || 'light');
     viewDate = todayISO();
