@@ -746,6 +746,7 @@ function dbEditDialog(idx) {
     '<div class="btn-row" style="margin-top:12px">' +
       (cur && !isCustom && state.settings.dbOver[origName] ? '<button class="btn" data-act="reset">Сбросить правку</button>' : '') +
       (isCustom ? '<button class="btn danger" data-act="del">Удалить</button>' : '') +
+      '<button class="btn" data-act="clear">Очистить</button>' +
       '<button class="btn" data-act="cancel">Отмена</button>' +
       '<button class="btn primary" data-act="save">Сохранить</button>' +
     '</div>');
@@ -787,6 +788,11 @@ function dbEditDialog(idx) {
     if (e.target === ov) { ov.remove(); return; }
     if (!act) return;
     if (act.dataset.act === 'save') save();
+    else if (act.dataset.act === 'clear') {
+      // очистить поля карточки для ввода заново
+      ['dbeName', 'dbeKcal', 'dbeP', 'dbeF', 'dbeC'].forEach((id) => { ov.querySelector('#' + id).value = ''; });
+      nameIn.focus();
+    }
     else if (act.dataset.act === 'del') {
       state.settings.dbCustom = state.settings.dbCustom.filter((x) => x.name !== origName);
       saveState(); renderProducts(); ov.remove();
