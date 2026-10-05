@@ -101,6 +101,9 @@ body.timeline-open .app { margin-right: 420px; }
   transition: all 0.2s; text-decoration: none;
 }
 .calendar-toggle-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,107,74,0.1); }
+/* Переход в КалКалк — цветная, чтобы отличалась от прочих кнопок блока */
+a.calendar-toggle-btn { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); background: color-mix(in srgb, var(--accent-2) 8%, transparent); }
+a.calendar-toggle-btn:hover { color: var(--accent-2); border-color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 18%, transparent); }
 
 /* ===== КАЛЕНДАРЬ ===== */
 .calendar-popover {
