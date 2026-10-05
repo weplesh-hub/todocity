@@ -580,6 +580,8 @@ input::placeholder { color: var(--muted); opacity: .7; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* ---------- Узкие экраны ---------- */
+.topbar-inner { flex-wrap: wrap; }
+.tabs { flex-wrap: wrap; }
 
 @media (max-width: 430px) {
   .ring-num { font-size: 22px; }
