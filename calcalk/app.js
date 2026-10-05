@@ -1,0 +1,701 @@
+/* ============================================================
+   КалКалк — трекер калорий и воды
+   Одностраничное приложение без зависимостей.
+   Данные хранятся локально в браузере (localStorage, ключ calcalk_v1).
+   ============================================================ */
+'use strict';
+
+/* ---------- База продуктов (ориентировочные значения на 100 г) ---------- */
+
+const FOOD_DB = [
+  // Крупы и гарниры
+  { name: 'Гречка отварная', kcal: 110, p: 4.2, f: 1.1, c: 21.3 },
+  { name: 'Рис отварной', kcal: 116, p: 2.4, f: 0.4, c: 25.0 },
+  { name: 'Овсянка на воде', kcal: 88, p: 3.0, f: 1.7, c: 15.0 },
+  { name: 'Макароны отварные', kcal: 135, p: 4.5, f: 1.1, c: 26.5 },
+  { name: 'Картофель отварной', kcal: 82, p: 2.0, f: 0.4, c: 16.7 },
+  { name: 'Картофель фри', kcal: 312, p: 3.4, f: 15.0, c: 41.0 },
+  { name: 'Булгур отварной', kcal: 83, p: 3.0, f: 0.2, c: 18.6 },
+  { name: 'Киноа отварная', kcal: 120, p: 4.4, f: 1.9, c: 21.3 },
+  { name: 'Фасоль отварная', kcal: 123, p: 7.8, f: 0.5, c: 21.2 },
+  { name: 'Чечевица отварная', kcal: 116, p: 9.0, f: 0.4, c: 20.1 },
+  // Хлеб и выпечка
+  { name: 'Хлеб белый', kcal: 266, p: 7.6, f: 3.2, c: 48.6 },
+  { name: 'Хлеб цельнозерновой', kcal: 230, p: 8.0, f: 3.5, c: 43.0 },
+  // Мясо и птица
+  { name: 'Куриная грудка отварная', kcal: 137, p: 29.8, f: 1.8, c: 0.4 },
+  { name: 'Куриное бедро запечённое', kcal: 195, p: 22.0, f: 10.9, c: 0 },
+  { name: 'Индейка филе отварное', kcal: 135, p: 24.0, f: 2.0, c: 0 },
+  { name: 'Говядина отварная', kcal: 220, p: 27.0, f: 8.5, c: 0 },
+  { name: 'Свинина запечённая', kcal: 275, p: 23.0, f: 19.5, c: 0 },
+  { name: 'Пельмени отварные', kcal: 245, p: 11.9, f: 8.0, c: 29.5 },
+  { name: 'Сосиски', kcal: 266, p: 12.0, f: 23.0, c: 2.0 },
+  // Рыба и морепродукты
+  { name: 'Лосось', kcal: 208, p: 20.1, f: 13.4, c: 0 },
+  { name: 'Треска отварная', kcal: 78, p: 17.8, f: 0.7, c: 0 },
+  { name: 'Тунец консервированный', kcal: 96, p: 21.0, f: 1.0, c: 0 },
+  { name: 'Креветки отварные', kcal: 95, p: 20.0, f: 1.5, c: 0 },
+  { name: 'Сельдь', kcal: 158, p: 17.7, f: 8.7, c: 0 },
+  // Молочное и яйца
+  { name: 'Молоко 2,5%', kcal: 52, p: 2.8, f: 2.5, c: 4.7 },
+  { name: 'Кефир 1%', kcal: 40, p: 3.0, f: 1.0, c: 4.0 },
+  { name: 'Творог 5%', kcal: 121, p: 17.0, f: 5.0, c: 1.8 },
+  { name: 'Творог обезжиренный', kcal: 71, p: 16.5, f: 0.6, c: 1.3 },
+  { name: 'Сыр твёрдый', kcal: 364, p: 25.0, f: 30.0, c: 0 },
+  { name: 'Йогурт греческий', kcal: 59, p: 10.0, f: 0.4, c: 3.6 },
+  { name: 'Сметана 20%', kcal: 204, p: 2.8, f: 20.0, c: 3.4 },
+  { name: 'Масло сливочное', kcal: 748, p: 0.8, f: 82.5, c: 0.8 },
+  { name: 'Яйцо куриное', kcal: 157, p: 12.7, f: 11.5, c: 0.7 },
+  // Овощи
+  { name: 'Огурец', kcal: 15, p: 0.8, f: 0.1, c: 2.8 },
+  { name: 'Помидор', kcal: 20, p: 1.1, f: 0.2, c: 3.7 },
+  { name: 'Морковь', kcal: 35, p: 1.3, f: 0.1, c: 6.9 },
+  { name: 'Капуста белокочанная', kcal: 28, p: 1.8, f: 0.1, c: 4.7 },
+  { name: 'Брокколи', kcal: 34, p: 2.8, f: 0.4, c: 7.0 },
+  { name: 'Авокадо', kcal: 160, p: 2.0, f: 14.7, c: 8.5 },
+  { name: 'Салат листовой', kcal: 15, p: 1.4, f: 0.2, c: 1.3 },
+  { name: 'Кукуруза консервированная', kcal: 90, p: 3.0, f: 1.2, c: 19.0 },
+  // Фрукты и ягоды
+  { name: 'Банан', kcal: 89, p: 1.1, f: 0.3, c: 22.8 },
+  { name: 'Яблоко', kcal: 52, p: 0.3, f: 0.2, c: 14.0 },
+  { name: 'Апельсин', kcal: 43, p: 0.9, f: 0.2, c: 8.1 },
+  { name: 'Мандарин', kcal: 53, p: 0.8, f: 0.3, c: 11.5 },
+  { name: 'Виноград', kcal: 69, p: 0.6, f: 0.2, c: 16.8 },
+  { name: 'Груша', kcal: 47, p: 0.4, f: 0.3, c: 10.9 },
+  { name: 'Клубника', kcal: 30, p: 0.7, f: 0.3, c: 7.7 },
+  { name: 'Арбуз', kcal: 30, p: 0.6, f: 0.2, c: 7.6 },
+  { name: 'Финики', kcal: 292, p: 2.5, f: 0.5, c: 69.0 },
+  // Орехи, масла, бобовые
+  { name: 'Миндаль', kcal: 579, p: 21.0, f: 49.9, c: 21.6 },
+  { name: 'Грецкий орех', kcal: 654, p: 15.2, f: 65.2, c: 13.7 },
+  { name: 'Арахисовая паста', kcal: 588, p: 25.1, f: 50.4, c: 20.0 },
+  { name: 'Оливковое масло', kcal: 884, p: 0, f: 100, c: 0 },
+  { name: 'Масло подсолнечное', kcal: 900, p: 0, f: 99.9, c: 0 },
+  { name: 'Тофу', kcal: 76, p: 8.1, f: 4.8, c: 1.9 },
+  { name: 'Хумус', kcal: 166, p: 7.9, f: 9.6, c: 14.3 },
+  // Сладкое и напитки
+  { name: 'Шоколад молочный', kcal: 535, p: 7.6, f: 29.9, c: 59.0 },
+  { name: 'Шоколад тёмный 70%', kcal: 598, p: 7.8, f: 42.6, c: 45.9 },
+  { name: 'Печенье овсяное', kcal: 437, p: 6.0, f: 15.0, c: 67.0 },
+  { name: 'Мороженое сливочное', kcal: 207, p: 3.5, f: 11.0, c: 24.0 },
+  { name: 'Мёд', kcal: 304, p: 0.3, f: 0, c: 82.0 },
+  { name: 'Сахар', kcal: 387, p: 0, f: 0, c: 100 },
+  { name: 'Кола', kcal: 42, p: 0, f: 0, c: 10.6 },
+  { name: 'Сок апельсиновый', kcal: 45, p: 0.7, f: 0.2, c: 10.4 },
+  { name: 'Кофе чёрный без сахара', kcal: 2, p: 0.1, f: 0, c: 0 },
+  { name: 'Чай без сахара', kcal: 1, p: 0, f: 0, c: 0 },
+  { name: 'Пиво светлое 4,5%', kcal: 43, p: 0.5, f: 0, c: 3.6 },
+  { name: 'Вино красное сухое', kcal: 68, p: 0.1, f: 0, c: 0.3 },
+  // Готовые блюда
+  { name: 'Пицца пепперони', kcal: 298, p: 13.0, f: 12.0, c: 34.0 },
+  { name: 'Ролл Филадельфия', kcal: 210, p: 8.0, f: 9.0, c: 24.0 },
+];
+
+const MEALS = [
+  { id: 'breakfast', label: 'Завтрак', icon: '🌅' },
+  { id: 'lunch', label: 'Обед', icon: '☀️' },
+  { id: 'dinner', label: 'Ужин', icon: '🌙' },
+  { id: 'snack', label: 'Перекус', icon: '🍏' },
+];
+
+const QUICK_FOOD = [
+  { label: '🍌 Банан', db: 'Банан', g: 120 },
+  { label: '🍎 Яблоко', db: 'Яблоко', g: 180 },
+  { label: '🥚 Яйцо', db: 'Яйцо куриное', g: 60 },
+  { label: '🍗 Курица', db: 'Куриная грудка отварная', g: 150 },
+  { label: '🥣 Творог', db: 'Творог 5%', g: 100 },
+  { label: '🌾 Гречка', db: 'Гречка отварная', g: 150 },
+  { label: '🍞 Хлеб', db: 'Хлеб белый', g: 30 },
+  { label: '☕ Кофе', db: 'Кофе чёрный без сахара', g: 200 },
+];
+
+const ACTIVITY = [
+  { v: 1.2, label: 'Минимальная (сидячая работа)' },
+  { v: 1.375, label: 'Лёгкая (1–3 тренировки в неделю)' },
+  { v: 1.55, label: 'Средняя (3–5 тренировок)' },
+  { v: 1.725, label: 'Высокая (6–7 тренировок)' },
+  { v: 1.9, label: 'Очень высокая (физический труд)' },
+];
+
+const AIM = [
+  { v: 'lose', label: 'Похудение (−15%)' },
+  { v: 'keep', label: 'Поддержание веса' },
+  { v: 'gain', label: 'Набор массы (+15%)' },
+];
+
+/* ---------- Состояние и хранилище ---------- */
+
+const STORE_KEY = 'calcalk_v1';
+
+const DEFAULTS = {
+  calorieGoal: 2100,
+  waterGoal: 2500,
+  profile: { gender: 'male', age: 30, height: 175, weight: 75, activity: 1.375, aim: 'keep' },
+};
+
+let state = loadState();
+let viewDate = todayISO();
+let activeFood = null; // продукт из базы, выбранный в подсказках
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object' && data.days) {
+        return {
+          settings: {
+            ...DEFAULTS,
+            ...(data.settings || {}),
+            profile: { ...DEFAULTS.profile, ...((data.settings || {}).profile || {}) },
+          },
+          days: data.days,
+        };
+      }
+    }
+  } catch (e) { /* повреждённые данные — начинаем с чистого листа */ }
+  return { settings: JSON.parse(JSON.stringify(DEFAULTS)), days: {} };
+}
+
+function saveState() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+
+function day(dateISO, create) {
+  if (!state.days[dateISO]) {
+    if (!create) return null;
+    state.days[dateISO] = { foods: [], water: [] };
+  }
+  return state.days[dateISO];
+}
+
+/* ---------- Утилиты ---------- */
+
+const el = (s) => document.querySelector(s);
+const num = (input) => { const v = parseFloat(input.value); return isFinite(v) ? v : 0; };
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+const nowTime = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function todayISO() { return iso(new Date()); }
+function fromISO(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function shiftISO(s, delta) { const d = fromISO(s); d.setDate(d.getDate() + delta); return iso(d); }
+
+const fmtFull = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+const fmtShort = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'short' });
+const fmtDayMonth = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
+
+function dayTotals(dateISO) {
+  const d = state.days[dateISO] || {};
+  const t = { kcal: 0, p: 0, f: 0, c: 0, water: 0 };
+  (d.foods || []).forEach((x) => {
+    t.kcal += +x.kcal || 0; t.p += +x.p || 0; t.f += +x.f || 0; t.c += +x.c || 0;
+  });
+  (d.water || []).forEach((x) => { t.water += +x.ml || 0; });
+  return t;
+}
+
+const RING_C = 2 * Math.PI * 60;
+function setRing(circle, frac) {
+  frac = Math.max(0, Math.min(1, frac || 0));
+  circle.style.strokeDasharray = RING_C;
+  circle.style.strokeDashoffset = RING_C * (1 - frac);
+}
+
+/* ---------- Тост ---------- */
+
+let toastTimer = null;
+function toast(msg) {
+  const t = el('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ---------- Тема ---------- */
+
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  el('#themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+}
+
+/* ---------- Дневник ---------- */
+
+function renderDiary() {
+  const t = dayTotals(viewDate);
+  const today = todayISO();
+  const goal = state.settings.calorieGoal;
+  const wgoal = state.settings.waterGoal;
+
+  // Дата
+  let main;
+  if (viewDate === today) main = 'Сегодня';
+  else if (viewDate === shiftISO(today, -1)) main = 'Вчера';
+  else main = fmtDayMonth.format(fromISO(viewDate));
+  el('#dateMain').textContent = main;
+  el('#dateSub').textContent = fmtFull.format(fromISO(viewDate));
+  el('#nextDay').disabled = viewDate >= today;
+
+  // Кольцо калорий
+  el('#kcalNum').textContent = Math.round(t.kcal).toLocaleString('ru-RU');
+  el('#kcalCap').textContent = 'из ' + goal.toLocaleString('ru-RU') + ' ккал';
+  setRing(el('#kcalRing'), goal ? t.kcal / goal : 0);
+  el('#kcalRing').classList.toggle('over', t.kcal > goal);
+  const diff = Math.round(goal - t.kcal);
+  el('#kcalFoot').textContent = diff >= 0
+    ? 'осталось ' + diff.toLocaleString('ru-RU') + ' ккал'
+    : 'перебор на ' + (-diff).toLocaleString('ru-RU') + ' ккал';
+  el('#kcalFoot').classList.toggle('bad', diff < 0);
+
+  // Кольцо воды
+  el('#waterNum').textContent = Math.round(t.water).toLocaleString('ru-RU');
+  el('#waterCap').textContent = 'из ' + wgoal.toLocaleString('ru-RU') + ' мл';
+  setRing(el('#waterRing'), wgoal ? t.water / wgoal : 0);
+  el('#waterFoot').textContent = t.water >= wgoal
+    ? 'цель выполнена 🎉 (+' + Math.round(t.water - wgoal).toLocaleString('ru-RU') + ' мл)'
+    : 'осталось ' + Math.round(wgoal - t.water).toLocaleString('ru-RU') + ' мл';
+  el('#waterFoot').classList.toggle('bad', false);
+
+  // Макронутриенты (целевые Б/Ж/У: 30/30/40% от нормы калорий)
+  el('#macrosBox').innerHTML =
+    macroRow('Б', t.p, goal * 0.30 / 4, '#7c5cff', 'Белки') +
+    macroRow('Ж', t.f, goal * 0.30 / 9, '#f2b32e', 'Жиры') +
+    macroRow('У', t.c, goal * 0.40 / 4, '#2fbf71', 'Углеводы');
+
+  // Итоги секций
+  el('#kcalTotal').textContent = Math.round(t.kcal).toLocaleString('ru-RU') + ' ккал';
+  el('#waterTotal').textContent = Math.round(t.water).toLocaleString('ru-RU') + ' мл';
+
+  renderWaterLog();
+  renderMeals();
+}
+
+function macroRow(label, val, target, color, title) {
+  const pct = target > 0 ? Math.min(100, val / target * 100) : 0;
+  return '<div class="macro">' +
+    '<span class="macro-l" title="' + title + '" style="color:' + color + '">' + label + '</span>' +
+    '<div class="macro-bar"><div class="macro-fill" style="width:' + pct.toFixed(1) + '%;background:' + color + '"></div></div>' +
+    '<span class="macro-v">' + Math.round(val) + ' / ' + Math.round(target) + ' г</span>' +
+    '</div>';
+}
+
+function renderWaterLog() {
+  const w = (state.days[viewDate] || {}).water || [];
+  el('#waterLog').innerHTML = w.length
+    ? w.map((x) =>
+        '<span class="water-chip">' + x.ml + ' мл · ' + escapeHtml(x.time || '') +
+        ' <button class="chip-del" data-act="water" data-id="' + x.id + '" title="Удалить">×</button></span>'
+      ).join('')
+    : '<span class="empty inline">Записи о выпитой воде появятся здесь.</span>';
+}
+
+function renderMeals() {
+  const foods = (state.days[viewDate] || {}).foods || [];
+  const box = el('#mealList');
+  if (!foods.length) {
+    box.innerHTML = '<div class="empty">Пока ничего не добавлено.<br>Воспользуйтесь быстрыми кнопками или формой выше 🙂</div>';
+    return;
+  }
+  box.innerHTML = MEALS.map((m) => {
+    const items = foods.filter((f) => f.meal === m.id);
+    if (!items.length) return '';
+    const sub = Math.round(items.reduce((s, f) => s + (+f.kcal || 0), 0));
+    return '<div class="meal">' +
+      '<div class="meal-head"><span>' + m.icon + ' ' + m.label + '</span><span>' + sub + ' ккал</span></div>' +
+      items.map((f) =>
+        '<div class="entry">' +
+        '<span class="entry-time">' + escapeHtml(f.time || '') + '</span>' +
+        '<span class="entry-name">' + escapeHtml(f.name) + (f.g ? ' <small>' + f.g + ' г</small>' : '') + '</span>' +
+        '<span class="entry-kcal">' + Math.round(f.kcal) + '</span>' +
+        '<button class="del" data-act="food" data-id="' + f.id + '" title="Удалить">×</button>' +
+        '</div>'
+      ).join('') +
+      '</div>';
+  }).join('');
+}
+
+/* ---------- Вода: действия ---------- */
+
+function addWater(ml) {
+  day(viewDate, true).water.push({ id: uid(), ml, time: nowTime() });
+  saveState();
+  renderDiary();
+  toast('+' + ml + ' мл 💧');
+}
+
+/* ---------- Еда: форма, подсказки, быстрые кнопки ---------- */
+
+function closeSuggest() {
+  el('#suggestBox').classList.remove('open');
+}
+
+function renderSuggest() {
+  const q = el('#foodName').value.trim().toLowerCase();
+  const box = el('#suggestBox');
+  if (q.length < 2) { closeSuggest(); box.innerHTML = ''; return; }
+  const hits = FOOD_DB.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
+  if (!hits.length) {
+    box.innerHTML = '<div class="suggest-empty">В базе не найдено — заполните калорийность вручную.</div>';
+  } else {
+    box.innerHTML = hits.map((f) =>
+      '<div class="suggest-item" data-i="' + FOOD_DB.indexOf(f) + '">' +
+      '<span>' + escapeHtml(f.name) + '</span><small>' + f.kcal + ' ккал / 100 г</small></div>'
+    ).join('');
+  }
+  box.classList.add('open');
+}
+
+function pickFood(item) {
+  activeFood = item;
+  el('#foodName').value = item.name;
+  el('#suggestBox').innerHTML = '';
+  closeSuggest();
+  if (!el('#foodGrams').value) el('#foodGrams').value = 100;
+  recalcFromDb();
+  el('#foodGrams').focus();
+}
+
+function recalcFromDb() {
+  if (!activeFood) return;
+  const k = (parseFloat(el('#foodGrams').value) || 0) / 100;
+  el('#foodKcal').value = Math.round(activeFood.kcal * k);
+  el('#foodP').value = +(activeFood.p * k).toFixed(1);
+  el('#foodF').value = +(activeFood.f * k).toFixed(1);
+  el('#foodC').value = +(activeFood.c * k).toFixed(1);
+}
+
+function buildChips() {
+  el('#quickChips').innerHTML = QUICK_FOOD.map((q, i) =>
+    '<button type="button" class="chip" data-chip="' + i + '" title="' + escapeHtml(q.db) + ', ' + q.g + ' г">' + q.label + '</button>'
+  ).join('');
+}
+
+/* ---------- История ---------- */
+
+function renderHistory() {
+  const box = el('#historyBox');
+  const today = todayISO();
+  const rows = [];
+  for (let i = 0; i < 14; i++) {
+    const d = shiftISO(today, -i);
+    const t = dayTotals(d);
+    if (i === 0 || t.kcal > 0 || t.water > 0) rows.push({ d, t });
+  }
+
+  if (rows.length === 1 && rows[0].t.kcal === 0 && rows[0].t.water === 0) {
+    box.innerHTML = '<div class="empty">История появится после первых записей 📈</div>';
+    return;
+  }
+
+  const kg = state.settings.calorieGoal;
+  const wg = state.settings.waterGoal;
+  const last7 = rows.slice(0, 7).filter((r) => r.t.kcal > 0 || r.t.water > 0);
+  const kAvg = last7.length ? Math.round(last7.reduce((s, r) => s + r.t.kcal, 0) / last7.length) : 0;
+  const wAvg = last7.length ? Math.round(last7.reduce((s, r) => s + r.t.water, 0) / last7.length) : 0;
+
+  const label = (d) =>
+    d === today ? 'Сегодня' : d === shiftISO(today, -1) ? 'Вчера' : fmtShort.format(fromISO(d));
+
+  box.innerHTML =
+    '<div class="h-summary">В среднем за ' + last7.length + ' дн.: ' +
+    '<b class="kcal">' + kAvg.toLocaleString('ru-RU') + ' ккал</b> · ' +
+    '<b class="water">' + wAvg.toLocaleString('ru-RU') + ' мл</b> воды</div>' +
+    rows.map((r) =>
+      '<div class="h-row' + (r.d === viewDate ? ' cur' : '') + '" data-date="' + r.d + '">' +
+      '<span class="h-date">' + label(r.d) + '</span>' +
+      '<div class="h-metric">' +
+        '<span class="h-num kcal' + (r.t.kcal > kg ? ' bad' : '') + '">' + Math.round(r.t.kcal).toLocaleString('ru-RU') + '</span>' +
+        '<div class="h-bar"><div class="h-fill kcal" style="width:' + Math.min(100, kg ? r.t.kcal / kg * 100 : 0).toFixed(1) + '%"></div></div>' +
+      '</div>' +
+      '<div class="h-metric">' +
+        '<span class="h-num water">' + Math.round(r.t.water).toLocaleString('ru-RU') + '</span>' +
+        '<div class="h-bar"><div class="h-fill water" style="width:' + Math.min(100, wg ? r.t.water / wg * 100 : 0).toFixed(1) + '%"></div></div>' +
+      '</div>' +
+      '</div>'
+    ).join('');
+}
+
+/* ---------- Настройки ---------- */
+
+function renderSettings() {
+  const s = state.settings;
+  el('#inGender').value = s.profile.gender;
+  el('#inAge').value = s.profile.age;
+  el('#inHeight').value = s.profile.height;
+  el('#inWeight').value = s.profile.weight;
+  el('#inActivity').value = String(s.profile.activity);
+  el('#inAim').value = s.profile.aim;
+  el('#inKcalGoal').value = s.calorieGoal;
+  el('#inWaterGoal').value = s.waterGoal;
+}
+
+function readProfile() {
+  const age = +el('#inAge').value;
+  const height = +el('#inHeight').value;
+  const weight = +el('#inWeight').value;
+  if (!(age >= 10 && age <= 100) || !(height >= 120 && height <= 230) || !(weight >= 30 && weight <= 300)) {
+    return null;
+  }
+  return {
+    gender: el('#inGender').value,
+    age, height, weight,
+    activity: +el('#inActivity').value,
+    aim: el('#inAim').value,
+  };
+}
+
+function calcTargetKcal(p) {
+  // Миффлин — Сан Жеор
+  const bmr = 10 * p.weight + 6.25 * p.height - 5 * p.age + (p.gender === 'female' ? -161 : 5);
+  const aimFactor = p.aim === 'lose' ? 0.85 : p.aim === 'gain' ? 1.15 : 1;
+  return bmr * p.activity * aimFactor;
+}
+
+/* ---------- Вкладки ---------- */
+
+function activateTab(name) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('hidden', v.id !== 'view-' + name));
+  if (name === 'diary') renderDiary();
+  if (name === 'history') renderHistory();
+  if (name === 'settings') renderSettings();
+}
+
+/* ---------- Инициализация и обработчики ---------- */
+
+function init() {
+  // Селекты
+  el('#inActivity').innerHTML = ACTIVITY.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
+  el('#inAim').innerHTML = AIM.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
+  el('#foodMeal').innerHTML = MEALS.map((m) => '<option value="' + m.id + '">' + m.icon + ' ' + m.label + '</option>').join('');
+
+  // Единый аккаунт с TODOCITY (общий origin — общий localStorage)
+  try {
+    var acc = localStorage.getItem('todo-app-v47-login');
+    var accToken = localStorage.getItem('todo-app-v47-token');
+    if (acc && accToken) {
+      var card = el('#accountCard');
+      if (card) { card.style.display = ''; el('#accountName').textContent = acc; }
+    }
+  } catch (e) { /* приватный режим и т.п. */ }
+
+  // Приём пищи по умолчанию — по времени суток
+  const h = new Date().getHours();
+  el('#foodMeal').value = h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack';
+
+  // Вкладки
+  document.querySelectorAll('.tab').forEach((t) =>
+    t.addEventListener('click', () => activateTab(t.dataset.tab)));
+
+  // Тема
+  applyTheme(document.documentElement.dataset.theme || 'light');
+  el('#themeBtn').addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    state.settings.theme = next;
+    saveState();
+    applyTheme(next);
+  });
+
+  // Навигация по датам
+  el('#prevDay').addEventListener('click', () => { viewDate = shiftISO(viewDate, -1); renderDiary(); });
+  el('#nextDay').addEventListener('click', () => {
+    if (viewDate < todayISO()) { viewDate = shiftISO(viewDate, 1); renderDiary(); }
+  });
+
+  // Вода
+  document.querySelectorAll('.water-quick').forEach((b) =>
+    b.addEventListener('click', () => addWater(+b.dataset.ml)));
+  el('#waterForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = parseFloat(el('#waterInput').value);
+    if (v > 0) { addWater(Math.round(v)); el('#waterInput').value = ''; }
+  });
+
+  // Быстрые продукты
+  buildChips();
+  el('#quickChips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    const q = QUICK_FOOD[+b.dataset.chip];
+    const item = FOOD_DB.find((f) => f.name === q.db);
+    if (!item) return;
+    const k = q.g / 100;
+    day(viewDate, true).foods.push({
+      id: uid(), name: q.db, g: q.g,
+      kcal: Math.round(item.kcal * k),
+      p: +(item.p * k).toFixed(1), f: +(item.f * k).toFixed(1), c: +(item.c * k).toFixed(1),
+      meal: el('#foodMeal').value, time: nowTime(),
+    });
+    saveState();
+    renderDiary();
+    toast('+ ' + q.label + ' · ' + Math.round(item.kcal * k) + ' ккал');
+  });
+
+  // Подсказки по базе
+  el('#foodName').addEventListener('input', () => { activeFood = null; renderSuggest(); });
+  el('#suggestBox').addEventListener('click', (e) => {
+    const it = e.target.closest('.suggest-item');
+    if (it) pickFood(FOOD_DB[+it.dataset.i]);
+  });
+  el('#foodGrams').addEventListener('input', recalcFromDb);
+
+  // Добавление еды вручную
+  el('#foodForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = el('#foodName').value.trim();
+    const kcal = parseFloat(el('#foodKcal').value);
+    if (!name) { toast('Укажите название продукта'); el('#foodName').focus(); return; }
+    if (!isFinite(kcal) || kcal < 0) { toast('Укажите калорийность'); el('#foodKcal').focus(); return; }
+    const g = parseFloat(el('#foodGrams').value);
+    day(viewDate, true).foods.push({
+      id: uid(),
+      name,
+      g: isFinite(g) && g > 0 ? Math.round(g) : null,
+      kcal: Math.round(kcal * 10) / 10,
+      p: num(el('#foodP')), f: num(el('#foodF')), c: num(el('#foodC')),
+      meal: el('#foodMeal').value, time: nowTime(),
+    });
+    saveState();
+    renderDiary();
+    toast('Добавлено: ' + name + ' · ' + Math.round(kcal) + ' ккал');
+    ['foodName', 'foodGrams', 'foodKcal', 'foodP', 'foodF', 'foodC'].forEach((id) => { el('#' + id).value = ''; });
+    activeFood = null;
+    closeSuggest();
+  });
+
+  // Удаление записей и закрытие подсказок (делегирование)
+  document.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (act) {
+      const d = state.days[viewDate];
+      if (!d) return;
+      if (act.dataset.act === 'food') d.foods = d.foods.filter((f) => f.id !== act.dataset.id);
+      else if (act.dataset.act === 'water') d.water = d.water.filter((w) => w.id !== act.dataset.id);
+      saveState();
+      renderDiary();
+      return;
+    }
+    if (!e.target.closest('.food-name-wrap')) closeSuggest();
+  });
+
+  // История: переход к дню
+  el('#historyBox').addEventListener('click', (e) => {
+    const r = e.target.closest('.h-row');
+    if (!r) return;
+    viewDate = r.dataset.date;
+    activateTab('diary');
+  });
+
+  // Профиль: автосохранение
+  ['inGender', 'inAge', 'inHeight', 'inWeight', 'inActivity', 'inAim'].forEach((id) =>
+    el('#' + id).addEventListener('change', () => {
+      const p = readProfile();
+      if (p) { state.settings.profile = p; saveState(); }
+    }));
+
+  // Цели
+  el('#inKcalGoal').addEventListener('change', () => {
+    const v = +el('#inKcalGoal').value;
+    if (v >= 500 && v <= 8000) {
+      state.settings.calorieGoal = Math.round(v);
+      saveState(); renderDiary();
+      toast('Цель по калориям обновлена');
+    } else {
+      toast('Введите значение от 500 до 8000 ккал');
+      renderSettings();
+    }
+  });
+
+  el('#inWaterGoal').addEventListener('change', () => {
+    const v = +el('#inWaterGoal').value;
+    if (v >= 500 && v <= 8000) {
+      state.settings.waterGoal = Math.round(v);
+      saveState(); renderDiary();
+      toast('Цель по воде обновлена');
+    } else {
+      toast('Введите значение от 500 до 8000 мл');
+      renderSettings();
+    }
+  });
+
+  // Автоматический расчёт целей
+  el('#calcKcal').addEventListener('click', () => {
+    const p = readProfile();
+    if (!p) { toast('Заполните профиль: возраст, рост, вес'); return; }
+    state.settings.profile = p;
+    const goal = Math.round(calcTargetKcal(p) / 10) * 10;
+    state.settings.calorieGoal = goal;
+    saveState(); renderSettings(); renderDiary();
+    toast('Норма по профилю: ' + goal.toLocaleString('ru-RU') + ' ккал/день');
+  });
+
+  el('#calcWater').addEventListener('click', () => {
+    const p = readProfile();
+    if (!p) { toast('Заполните профиль: возраст, рост, вес'); return; }
+    state.settings.profile = p;
+    const goal = Math.round((p.weight * 30) / 50) * 50;
+    state.settings.waterGoal = goal;
+    saveState(); renderSettings(); renderDiary();
+    toast('Норма воды: ' + goal.toLocaleString('ru-RU') + ' мл/день');
+  });
+
+  // Экспорт / импорт / сброс
+  el('#exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'calcalk-' + todayISO() + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Файл с данными сохранён');
+  });
+
+  el('#importBtn').addEventListener('click', () => el('#importFile').click());
+  el('#importFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data || typeof data !== 'object' || !data.days || !data.settings) throw new Error('bad format');
+      state = {
+        settings: {
+          ...DEFAULTS, ...data.settings,
+          profile: { ...DEFAULTS.profile, ...(data.settings.profile || {}) },
+        },
+        days: data.days,
+      };
+      saveState();
+      if (state.settings.theme) applyTheme(state.settings.theme);
+      viewDate = todayISO();
+      renderDiary();
+      renderSettings();
+      toast('Данные импортированы');
+    } catch (err) {
+      toast('Не удалось прочитать файл: ожидается резервная копия КалКалк');
+    }
+  });
+
+  el('#resetBtn').addEventListener('click', () => {
+    if (!confirm('Удалить все записи и настройки? Действие необратимо.')) return;
+    localStorage.removeItem(STORE_KEY);
+    state = loadState();
+    viewDate = todayISO();
+    renderDiary();
+    renderSettings();
+    toast('Все данные удалены');
+  });
+
+  // Первый показ
+  renderDiary();
+}
+
+init();

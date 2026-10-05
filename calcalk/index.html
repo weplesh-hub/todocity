@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="КалКалк — простой трекер калорий и воды. Данные хранятся в вашем браузере.">
+<title>КалКалк — калории и вода</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A5%97%3C/text%3E%3C/svg%3E">
+<script>
+/* Раннее применение темы, чтобы не мигал светлый фон в тёмной теме */
+(function () {
+  var t = null;
+  try {
+    var raw = localStorage.getItem('calcalk_v1');
+    if (raw) { var s = JSON.parse(raw); if (s && s.settings) t = s.settings.theme; }
+  } catch (e) {}
+  if (t !== 'light' && t !== 'dark') {
+    t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.dataset.theme = t;
+})();
+</script>
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">🥗 КалКалк</div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="diary">Дневник</button>
+      <button class="tab" data-tab="history">История</button>
+      <button class="tab" data-tab="settings">Настройки</button>
+    </nav>
+    <a class="icon-btn" href="../" title="Вернуться в TODOCITY — списки дел" aria-label="Вернуться в TODOCITY">📋</a>
+    <button class="icon-btn" id="themeBtn" title="Сменить тему">🌙</button>
+  </div>
+</header>
+
+<main>
+  <!-- ================= ДНЕВНИК ================= -->
+  <section class="view" id="view-diary">
+
+    <div class="card date-nav">
+      <button class="nav-btn" id="prevDay" aria-label="Предыдущий день">‹</button>
+      <div class="date-label">
+        <span class="date-main" id="dateMain">Сегодня</span>
+        <span class="date-sub" id="dateSub"></span>
+      </div>
+      <button class="nav-btn" id="nextDay" aria-label="Следующий день">›</button>
+    </div>
+
+    <div class="rings-row">
+      <div class="card ring-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 140 140" aria-hidden="true">
+            <circle class="ring-bg" cx="70" cy="70" r="60"></circle>
+            <circle class="ring-val kcal" id="kcalRing" cx="70" cy="70" r="60"></circle>
+          </svg>
+          <div class="ring-center">
+            <span class="ring-num" id="kcalNum">0</span>
+            <span class="ring-cap" id="kcalCap"></span>
+          </div>
+        </div>
+        <div class="ring-title">🔥 Калории</div>
+        <div class="ring-foot" id="kcalFoot"></div>
+      </div>
+
+      <div class="card ring-card">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 140 140" aria-hidden="true">
+            <circle class="ring-bg" cx="70" cy="70" r="60"></circle>
+            <circle class="ring-val water" id="waterRing" cx="70" cy="70" r="60"></circle>
+          </svg>
+          <div class="ring-center">
+            <span class="ring-num" id="waterNum">0</span>
+            <span class="ring-cap" id="waterCap"></span>
+          </div>
+        </div>
+        <div class="ring-title">💧 Вода</div>
+        <div class="ring-foot" id="waterFoot"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head"><h2>🧬 Белки · Жиры · Углеводы</h2></div>
+      <div id="macrosBox"></div>
+    </div>
+
+    <div class="card section">
+      <div class="section-head">
+        <h2>💧 Вода</h2>
+        <span class="section-total" id="waterTotal">0 мл</span>
+      </div>
+      <div class="water-actions">
+        <button type="button" class="btn water-quick" data-ml="100">+100</button>
+        <button type="button" class="btn water-quick" data-ml="250">+250 мл</button>
+        <button type="button" class="btn water-quick" data-ml="500">+500</button>
+        <form id="waterForm" class="water-custom">
+          <input type="number" id="waterInput" min="1" step="1" placeholder="своё, мл">
+          <button class="btn" type="submit">ОК</button>
+        </form>
+      </div>
+      <div class="water-log" id="waterLog"></div>
+    </div>
+
+    <div class="card section">
+      <div class="section-head">
+        <h2>🍽 Еда</h2>
+        <span class="section-total" id="kcalTotal">0 ккал</span>
+      </div>
+      <div class="quick-chips" id="quickChips"></div>
+
+      <form id="foodForm" class="food-form" autocomplete="off">
+        <div class="food-name-wrap">
+          <input id="foodName" placeholder="Название продукта или поиск по базе">
+          <div class="suggest" id="suggestBox"></div>
+        </div>
+        <div class="food-grid">
+          <label>Граммы<input id="foodGrams" type="number" min="0" step="1" placeholder="—"></label>
+          <label>Ккал<input id="foodKcal" type="number" min="0" step="1" placeholder="0" required></label>
+          <label>Белки<input id="foodP" type="number" min="0" step="0.1" placeholder="—"></label>
+          <label>Жиры<input id="foodF" type="number" min="0" step="0.1" placeholder="—"></label>
+          <label>Углеводы<input id="foodC" type="number" min="0" step="0.1" placeholder="—"></label>
+          <label>Приём пищи<select id="foodMeal"></select></label>
+        </div>
+        <button class="btn primary wide" type="submit">Добавить в дневник</button>
+      </form>
+
+      <div id="mealList"></div>
+    </div>
+  </section>
+
+  <!-- ================= ИСТОРИЯ ================= -->
+  <section class="view hidden" id="view-history">
+    <h2 class="view-title">📊 История</h2>
+    <div class="card" id="historyBox"></div>
+    <p class="hint center">Нажмите на день, чтобы открыть его в дневнике.</p>
+  </section>
+
+  <!-- ================= НАСТРОЙКИ ================= -->
+  <section class="view hidden" id="view-settings">
+    <h2 class="view-title">⚙️ Настройки</h2>
+
+    <div class="card" id="accountCard" style="display:none">
+      <h3 class="card-title">👤 Аккаунт</h3>
+      <p class="hint" style="margin:0 0 8px">Единый аккаунт с TODOCITY. Вход и выход — в настройках TODOCITY.</p>
+      <p style="margin:0;font-weight:700"><span id="accountName"></span></p>
+      <p class="hint" style="margin:6px 0 0"><a href="../" style="color:inherit">← Перейти в TODOCITY</a></p>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">👤 Профиль</h3>
+      <div class="food-grid">
+        <label>Пол
+          <select id="inGender">
+            <option value="male">Мужской</option>
+            <option value="female">Женский</option>
+          </select>
+        </label>
+        <label>Возраст<input id="inAge" type="number" min="10" max="100" step="1"></label>
+        <label>Вес, кг<input id="inWeight" type="number" min="30" max="300" step="0.1"></label>
+        <label>Рост, см<input id="inHeight" type="number" min="120" max="230" step="1"></label>
+        <label class="span2">Активность<select id="inActivity"></select></label>
+        <label class="span2">Цель<select id="inAim"></select></label>
+      </div>
+      <p class="hint">Профиль сохраняется автоматически при изменении полей.</p>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">🎯 Дневные цели</h3>
+      <div class="food-grid">
+        <label>Калории, ккал<input id="inKcalGoal" type="number" min="500" max="8000" step="10"></label>
+        <label>Вода, мл<input id="inWaterGoal" type="number" min="500" max="8000" step="50"></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="calcKcal">🧮 Рассчитать калории по профилю</button>
+        <button class="btn" id="calcWater">💧 Рассчитать воду (30 мл × вес)</button>
+      </div>
+      <p class="hint">Расчёт калорий — по формуле Миффлина — Сан Жеора с учётом активности и цели (±15%). Цели сохраняются автоматически.</p>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">💾 Данные</h3>
+      <p class="hint">Все записи хранятся только в этом браузере (localStorage). Для переноса на другое устройство или резервной копии используйте экспорт в JSON-файл.</p>
+      <div class="btn-row">
+        <button class="btn" id="exportBtn">⬇️ Экспорт (JSON)</button>
+        <button class="btn" id="importBtn">⬆️ Импорт</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+        <button class="btn danger" id="resetBtn">🗑 Сбросить всё</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script src="app.js?v=1"></script>
+</body>
+</html>
