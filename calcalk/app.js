@@ -721,26 +721,15 @@ function renderProducts() {
     ? list.map((f) => {
         const i = db.indexOf(f);
         const badge = f.custom
-          ? '<span class="db-badge custom">свой</span>'
-          : (f.edited ? '<span class="db-badge edited">изменён</span>' : '');
+          ? '<span class="db-badge custom">custom</span>'
+          : (f.edited ? '<span class="db-badge edited">edited</span>' : '');
         return '<div class="db-row">' +
           '<span class="db-name">' + escapeHtml(f.name) + badge + '</span>' +
-          '<span class="db-kbzhu">' + f.kcal + ' ккал · Б ' + f.p + ' / Ж ' + f.f + ' / У ' + f.c + '</span>' +
-          '<button type="button" class="db-edit" data-i="' + i + '" title="Изменить">✎</button>' +
+          '<span class="db-kbzhu">' + f.kcal + ' kcal · P ' + f.p + ' / F ' + f.f + ' / C ' + f.c + '</span>' +
+          '<button type="button" class="db-edit" data-i="' + i + '" title="Edit">✎</button>' +
         '</div>';
       }).join('')
-    : '<div class="empty">Ничего не найдено 🔍</div>';
-  // скрытые базовые продукты — восстановление
-  const hidden = state.settings.dbHidden || [];
-  if (hidden.length) {
-    el('#dbList').innerHTML += '<div class="db-hidden-head">Удалённые из базы (' + hidden.length + '):</div>' +
-      hidden.map((n) =>
-        '<div class="db-row hidden-row">' +
-          '<span class="db-name">' + escapeHtml(n) + '</span>' +
-          '<button type="button" class="db-restore" data-restore="' + escapeHtml(n) + '" title="Вернуть в базу">↩ Вернуть</button>' +
-        '</div>'
-      ).join('');
-  }
+    : '<div class="empty">Nothing found 🔍</div>';
 }
 
 // Диалог правки/добавления продукта (на 100 г). idx = индекс в getFoodDB() или null для нового
@@ -816,11 +805,11 @@ function dbEditDialog(idx) {
         saveState(); renderProducts(); ov.remove();
         toast('Продукт удалён из базы');
       } else {
-        // базовый продукт — скрываем из базы (восстановление внизу списка)
+        // базовый продукт — убираем из базы насовсем (без восстановления)
         state.settings.dbHidden = (state.settings.dbHidden || []).concat([origName]);
         delete state.settings.dbOver[origName]; // правка больше не нужна
         saveState(); renderProducts(); ov.remove();
-        toast('«' + origName + '» удалён из базы — вернуть можно внизу списка');
+        toast('«' + origName + '» удалён из базы');
       }
     } else if (act.dataset.act === 'reset') {
       delete state.settings.dbOver[origName];
@@ -855,13 +844,7 @@ function init() {
   el('#dbAddBtn').addEventListener('click', () => dbEditDialog(null));
   el('#dbList').addEventListener('click', (e) => {
     const b = e.target.closest('.db-edit');
-    if (b) { dbEditDialog(+b.dataset.i); return; }
-    const r = e.target.closest('.db-restore');
-    if (r) {
-      state.settings.dbHidden = (state.settings.dbHidden || []).filter((n) => n !== r.dataset.restore);
-      saveState(); renderProducts();
-      toast('«' + r.dataset.restore + '» возвращён в базу');
-    }
+    if (b) dbEditDialog(+b.dataset.i);
   });
 
   // Тема
