@@ -121,7 +121,38 @@ const DEFAULTS = {
   waterGoal: 2500,
   profile: { gender: 'male', age: 30, height: 175, weight: 75, activity: 1.375, aim: 'keep' },
   quick: Array.from({ length: 20 }, () => null), // 20 ячеек частых продуктов, КБЖУ на 100 г
+  dbOver: {},     // правки базовых продуктов: { "Имя из базы": {kcal,p,f,c} }
+  dbCustom: [],   // свои продукты: [{name,kcal,p,f,c}]
 };
+
+// базовые продукты с правками пользователя + его собственные
+function normalizeDb(over, custom) {
+  const o = {};
+  if (over && typeof over === 'object') {
+    Object.keys(over).forEach((k) => {
+      const v = over[k];
+      if (v && typeof v === 'object' && isFinite(+v.kcal)) {
+        o[k] = { kcal: +v.kcal || 0, p: +v.p || 0, f: +v.f || 0, c: +v.c || 0 };
+      }
+    });
+  }
+  const cu = [];
+  if (Array.isArray(custom)) {
+    custom.forEach((v) => {
+      if (v && v.name && isFinite(+v.kcal)) {
+        cu.push({ name: String(v.name).slice(0, 40), kcal: +v.kcal || 0, p: +v.p || 0, f: +v.f || 0, c: +v.c || 0 });
+      }
+    });
+  }
+  return { dbOver: o, dbCustom: cu };
+}
+
+function getFoodDB() {
+  const over = state.settings.dbOver || {};
+  const base = FOOD_DB.map((f) => (over[f.name] ? Object.assign({}, f, over[f.name], { edited: true }) : f));
+  const custom = (state.settings.dbCustom || []).map((f) => Object.assign({}, f, { custom: true }));
+  return base.concat(custom);
+}
 
 // гарантируем массив из 20 корректных ячеек (null или {name,kcal,p,f,c,bg,fg})
 function normalizeQuick(arr) {
@@ -147,12 +178,16 @@ function loadState() {
     if (raw) {
       const data = JSON.parse(raw);
       if (data && typeof data === 'object' && data.days) {
+        const s = data.settings || {};
+        const db = normalizeDb(s.dbOver, s.dbCustom);
         return {
           settings: {
             ...DEFAULTS,
-            ...(data.settings || {}),
-            profile: { ...DEFAULTS.profile, ...((data.settings || {}).profile || {}) },
-            quick: normalizeQuick((data.settings || {}).quick),
+            ...s,
+            profile: { ...DEFAULTS.profile, ...(s.profile || {}) },
+            quick: normalizeQuick(s.quick),
+            dbOver: db.dbOver,
+            dbCustom: db.dbCustom,
           },
           days: data.days,
         };
@@ -347,12 +382,13 @@ function renderSuggest() {
   const q = el('#foodName').value.trim().toLowerCase();
   const box = el('#suggestBox');
   if (q.length < 2) { closeSuggest(); box.innerHTML = ''; return; }
-  const hits = FOOD_DB.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
+  const db = getFoodDB();
+  const hits = db.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 8);
   if (!hits.length) {
-    box.innerHTML = '<div class="suggest-empty">В базе не найдено — заполните калорийность вручную.</div>';
+    box.innerHTML = '<div class="suggest-empty">В базе не найдено — добавьте продукт во вкладке «Продукты» или заполните вручную.</div>';
   } else {
     box.innerHTML = hits.map((f) =>
-      '<div class="suggest-item" data-i="' + FOOD_DB.indexOf(f) + '">' +
+      '<div class="suggest-item" data-i="' + db.indexOf(f) + '">' +
       '<span>' + escapeHtml(f.name) + '</span><small>' + f.kcal + ' ккал / 100 г</small></div>'
     ).join('');
   }
@@ -652,7 +688,101 @@ function activateTab(name) {
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('hidden', v.id !== 'view-' + name));
   if (name === 'diary') renderDiary();
   if (name === 'history') renderHistory();
+  if (name === 'products') renderProducts();
   if (name === 'settings') renderSettings();
+}
+
+/* ---------- База продуктов: просмотр, правка, пополнение ---------- */
+function renderProducts() {
+  const q = (el('#dbSearch').value || '').trim().toLowerCase();
+  const db = getFoodDB();
+  const list = q ? db.filter((f) => f.name.toLowerCase().includes(q)) : db;
+  el('#dbList').innerHTML = list.length
+    ? list.map((f) => {
+        const i = db.indexOf(f);
+        const badge = f.custom
+          ? '<span class="db-badge custom">свой</span>'
+          : (f.edited ? '<span class="db-badge edited">изменён</span>' : '');
+        return '<div class="db-row">' +
+          '<span class="db-name">' + escapeHtml(f.name) + badge + '</span>' +
+          '<span class="db-kbzhu">' + f.kcal + ' ккал · Б ' + f.p + ' / Ж ' + f.f + ' / У ' + f.c + '</span>' +
+          '<button type="button" class="db-edit" data-i="' + i + '" title="Изменить">✎</button>' +
+        '</div>';
+      }).join('')
+    : '<div class="empty">Ничего не найдено 🔍</div>';
+}
+
+// Диалог правки/добавления продукта (на 100 г). idx = индекс в getFoodDB() или null для нового
+function dbEditDialog(idx) {
+  const db = getFoodDB();
+  const cur = idx !== null && idx !== undefined ? db[idx] : null;
+  const isCustom = !!(cur && cur.custom);
+  const origName = cur ? cur.name : '';
+  const num = (id, label, val, step) =>
+    '<label>' + label + '<input id="' + id + '" type="number" min="0" step="' + step + '" value="' + (val !== undefined && val !== null ? val : '') + '"></label>';
+  const ov = qdOverlay(
+    '<h3 class="card-title">' + (cur ? '✏️ ' + escapeHtml(cur.name) : '➕ Новый продукт') + '</h3>' +
+    '<div class="food-grid">' +
+      '<label class="span2">Название<input id="dbeName" type="text" maxlength="40" value="' + (cur ? escapeHtml(cur.name) : '') + '"></label>' +
+      num('dbeKcal', 'Ккал', cur ? cur.kcal : '', '1') +
+      num('dbeP', 'Белки', cur ? cur.p : '', '0.1') +
+      num('dbeF', 'Жиры', cur ? cur.f : '', '0.1') +
+      num('dbeC', 'Углеводы', cur ? cur.c : '', '0.1') +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:12px">' +
+      (cur && !isCustom && state.settings.dbOver[origName] ? '<button class="btn" data-act="reset">Сбросить правку</button>' : '') +
+      (isCustom ? '<button class="btn danger" data-act="del">Удалить</button>' : '') +
+      '<button class="btn" data-act="cancel">Отмена</button>' +
+      '<button class="btn primary" data-act="save">Сохранить</button>' +
+    '</div>');
+  const nameIn = ov.querySelector('#dbeName');
+  nameIn.focus();
+  const save = () => {
+    const name = nameIn.value.trim();
+    const kcal = +ov.querySelector('#dbeKcal').value;
+    if (!name || !(kcal >= 0)) { nameIn.focus(); return; }
+    const vals = {
+      kcal: Math.round(kcal),
+      p: +(+ov.querySelector('#dbeP').value || 0).toFixed(1),
+      f: +(+ov.querySelector('#dbeF').value || 0).toFixed(1),
+      c: +(+ov.querySelector('#dbeC').value || 0).toFixed(1),
+    };
+    if (cur && isCustom) {
+      // правка своего продукта
+      const row = state.settings.dbCustom.find((x) => x.name === origName);
+      if (row) { row.name = name; Object.assign(row, vals); }
+    } else if (cur) {
+      // правка базового продукта: под оригинальным именем (ключ правки не меняется)
+      state.settings.dbOver[origName] = vals;
+    } else {
+      // новый продукт
+      if (getFoodDB().some((f) => f.name.toLowerCase() === name.toLowerCase())) {
+        toast('Такой продукт уже есть в базе'); return;
+      }
+      state.settings.dbCustom.push(Object.assign({ name: name }, vals));
+    }
+    saveState(); renderProducts(); ov.remove();
+    toast('База обновлена: ' + name);
+  };
+  nameIn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
+  });
+  ov.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (e.target === ov) { ov.remove(); return; }
+    if (!act) return;
+    if (act.dataset.act === 'save') save();
+    else if (act.dataset.act === 'del') {
+      state.settings.dbCustom = state.settings.dbCustom.filter((x) => x.name !== origName);
+      saveState(); renderProducts(); ov.remove();
+      toast('Продукт удалён из базы');
+    } else if (act.dataset.act === 'reset') {
+      delete state.settings.dbOver[origName];
+      saveState(); renderProducts(); ov.remove();
+      toast('Правка сброшена — значения из базовой базы');
+    } else ov.remove();
+  });
 }
 
 /* ---------- Инициализация и обработчики ---------- */
@@ -674,6 +804,14 @@ function init() {
   // Вкладки
   document.querySelectorAll('.tab').forEach((t) =>
     t.addEventListener('click', () => activateTab(t.dataset.tab)));
+
+  // База продуктов: поиск, добавление, правка
+  el('#dbSearch').addEventListener('input', renderProducts);
+  el('#dbAddBtn').addEventListener('click', () => dbEditDialog(null));
+  el('#dbList').addEventListener('click', (e) => {
+    const b = e.target.closest('.db-edit');
+    if (b) dbEditDialog(+b.dataset.i);
+  });
 
   // Тема
   applyTheme(document.documentElement.dataset.theme || 'light');
@@ -715,7 +853,7 @@ function init() {
   el('#foodName').addEventListener('input', () => { activeFood = null; renderSuggest(); });
   el('#suggestBox').addEventListener('click', (e) => {
     const it = e.target.closest('.suggest-item');
-    if (it) pickFood(FOOD_DB[+it.dataset.i]);
+    if (it) pickFood(getFoodDB()[+it.dataset.i]);
   });
   el('#foodGrams').addEventListener('input', () => {}); // граммы не пересчитывают поля — умножение при сохранении
 
@@ -949,6 +1087,9 @@ function ccApply(srv) {
       },
       days: srv.days
     };
+    var dbSrv = normalizeDb((srv.settings || {}).dbOver, (srv.settings || {}).dbCustom);
+    state.settings.dbOver = dbSrv.dbOver;
+    state.settings.dbCustom = dbSrv.dbCustom;
     saveState(); // флаг ccSyncing не даст тут же отправить обратно
     applyTheme(state.settings.theme || 'light');
     viewDate = todayISO();

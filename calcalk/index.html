@@ -20,7 +20,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 
@@ -30,6 +30,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="diary">Дневник</button>
       <button class="tab" data-tab="history">История</button>
+      <button class="tab" data-tab="products">Продукты</button>
       <button class="tab" data-tab="settings">Настройки</button>
     </nav>
     <a class="icon-btn" href="../" title="Вернуться в TODOCITY — списки дел" aria-label="Вернуться в TODOCITY">📋</a>
@@ -139,6 +140,19 @@
     <p class="hint center">Нажмите на день, чтобы открыть его в дневнике.</p>
   </section>
 
+  <!-- ================= БАЗА ПРОДУКТОВ ================= -->
+  <section class="view hidden" id="view-products">
+    <h2 class="view-title">🥗 База продуктов</h2>
+    <div class="card">
+      <div class="products-toolbar">
+        <input id="dbSearch" type="text" placeholder="Поиск по названию…" maxlength="40">
+        <button class="btn primary" id="dbAddBtn" type="button">+ Добавить</button>
+      </div>
+      <div id="dbList"></div>
+      <p class="hint">Значения — на 100 г. Правки и свои продукты сохраняются в аккаунте и синхронизируются.</p>
+    </div>
+  </section>
+
   <!-- ================= НАСТРОЙКИ ================= -->
   <section class="view hidden" id="view-settings">
     <h2 class="view-title">⚙️ Настройки</h2>
@@ -199,6 +213,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
