@@ -98,17 +98,6 @@ const MEALS = [
   { id: 'snack', label: 'Перекус', icon: '🍏' },
 ];
 
-const QUICK_FOOD = [
-  { label: '🍌 Банан', db: 'Банан', g: 120 },
-  { label: '🍎 Яблоко', db: 'Яблоко', g: 180 },
-  { label: '🥚 Яйцо', db: 'Яйцо куриное', g: 60 },
-  { label: '🍗 Курица', db: 'Куриная грудка отварная', g: 150 },
-  { label: '🥣 Творог', db: 'Творог 5%', g: 100 },
-  { label: '🌾 Гречка', db: 'Гречка отварная', g: 150 },
-  { label: '🍞 Хлеб', db: 'Хлеб белый', g: 30 },
-  { label: '☕ Кофе', db: 'Кофе чёрный без сахара', g: 200 },
-];
-
 const ACTIVITY = [
   { v: 1.2, label: 'Минимальная (сидячая работа)' },
   { v: 1.375, label: 'Лёгкая (1–3 тренировки в неделю)' },
@@ -131,7 +120,20 @@ const DEFAULTS = {
   calorieGoal: 2100,
   waterGoal: 2500,
   profile: { gender: 'male', age: 30, height: 175, weight: 75, activity: 1.375, aim: 'keep' },
+  quick: Array.from({ length: 20 }, () => null), // 20 ячеек частых продуктов, КБЖУ на 100 г
 };
+
+// гарантируем массив из 20 корректных ячеек (null или {name,kcal,p,f,c})
+function normalizeQuick(arr) {
+  const out = [];
+  for (let i = 0; i < 20; i++) {
+    const it = Array.isArray(arr) ? arr[i] : null;
+    out.push(it && typeof it === 'object' && it.name && +it.kcal >= 0
+      ? { name: String(it.name).slice(0, 40), kcal: +it.kcal || 0, p: +it.p || 0, f: +it.f || 0, c: +it.c || 0 }
+      : null);
+  }
+  return out;
+}
 
 let state = loadState();
 let viewDate = todayISO();
@@ -148,6 +150,7 @@ function loadState() {
             ...DEFAULTS,
             ...(data.settings || {}),
             profile: { ...DEFAULTS.profile, ...((data.settings || {}).profile || {}) },
+            quick: normalizeQuick((data.settings || {}).quick),
           },
           days: data.days,
         };
@@ -374,9 +377,120 @@ function recalcFromDb() {
 }
 
 function buildChips() {
-  el('#quickChips').innerHTML = QUICK_FOOD.map((q, i) =>
-    '<button type="button" class="chip" data-chip="' + i + '" title="' + escapeHtml(q.db) + ', ' + q.g + ' г">' + q.label + '</button>'
+  el('#quickChips').innerHTML = state.settings.quick.map((it, i) => it
+    ? '<button type="button" class="chip saved" data-chip="' + i + '" title="' + escapeHtml(it.name) + ' · ' + it.kcal + ' ккал/100 г">' +
+        '<span class="chip-name">' + escapeHtml(it.name) + '</span>' +
+        '<span class="chip-sub">' + it.kcal + ' ккал</span>' +
+        '<i class="chip-edit" data-edit="' + i + '" title="Изменить">✎</i>' +
+      '</button>'
+    : '<button type="button" class="chip empty" data-chip="' + i + '" title="Сохранить свой продукт">+</button>'
   ).join('');
+}
+
+/* ---------- Диалоги быстрых продуктов ---------- */
+function qdOverlay(html) {
+  const old = document.querySelector('.qd-overlay');
+  if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.className = 'qd-overlay';
+  ov.innerHTML = '<div class="card qd-card">' + html + '</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+  return ov;
+}
+
+// Клик по сохранённому продукту: спросить вес и добавить в дневник
+function quickGramsDialog(i) {
+  const it = state.settings.quick[i];
+  const ov = qdOverlay(
+    '<h3 class="card-title">🍽 ' + escapeHtml(it.name) + '</h3>' +
+    '<p class="hint" style="margin:0 0 10px">' + it.kcal + ' ккал · Б ' + it.p + ' / Ж ' + it.f + ' / У ' + it.c + ' на 100 г</p>' +
+    '<div class="food-grid">' +
+      '<label>Вес, г<input id="qdGrams" type="number" min="1" step="1" value="100"></label>' +
+      '<label>Приём пищи<select id="qdMeal">' +
+        MEALS.map((m) => '<option value="' + m.id + '"' + (m.id === el('#foodMeal').value ? ' selected' : '') + '>' + m.icon + ' ' + m.label + '</option>').join('') +
+      '</select></label>' +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:12px">' +
+      '<button class="btn" data-act="cancel">Отмена</button>' +
+      '<button class="btn primary" data-act="add">Добавить</button>' +
+    '</div>');
+  const input = ov.querySelector('#qdGrams');
+  input.focus(); input.select();
+  const add = () => {
+    const g = Math.round(+input.value);
+    if (!g || g <= 0) { input.focus(); return; }
+    const k = g / 100;
+    day(viewDate, true).foods.push({
+      id: uid(), name: it.name, g: g,
+      kcal: Math.round(it.kcal * k),
+      p: +((it.p || 0) * k).toFixed(1), f: +((it.f || 0) * k).toFixed(1), c: +((it.c || 0) * k).toFixed(1),
+      meal: ov.querySelector('#qdMeal').value, time: nowTime(),
+    });
+    saveState(); renderDiary(); ov.remove();
+    toast('+ ' + it.name + ' · ' + g + ' г · ' + Math.round(it.kcal * k) + ' ккал');
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); add(); }
+    if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
+  });
+  ov.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'add') add();
+    else ov.remove();
+  });
+}
+
+// Пустая ячейка или ✎: задать/изменить продукт ячейки
+function quickEditDialog(i) {
+  const cur = state.settings.quick[i];
+  const num = (id, label, val, step) =>
+    '<label>' + label + '<input id="' + id + '" type="number" min="0" step="' + step + '" value="' + (val !== undefined && val !== null ? val : '') + '"></label>';
+  const ov = qdOverlay(
+    '<h3 class="card-title">✏️ ' + (cur ? 'Изменить продукт' : 'Ячейка ' + (i + 1) + ' из 20') + '</h3>' +
+    '<div class="food-grid">' +
+      '<label class="span2">Название (на 100 г)<input id="qeName" type="text" maxlength="40" value="' + (cur ? escapeHtml(cur.name) : '') + '"></label>' +
+      num('qeKcal', 'Ккал', cur ? cur.kcal : '', '1') +
+      num('qeP', 'Белки', cur ? cur.p : '', '0.1') +
+      num('qeF', 'Жиры', cur ? cur.f : '', '0.1') +
+      num('qeC', 'Углеводы', cur ? cur.c : '', '0.1') +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:12px">' +
+      (cur ? '<button class="btn danger" data-act="del">Очистить</button>' : '') +
+      '<button class="btn" data-act="cancel">Отмена</button>' +
+      '<button class="btn primary" data-act="save">Сохранить</button>' +
+    '</div>');
+  const nameIn = ov.querySelector('#qeName');
+  nameIn.focus();
+  const save = () => {
+    const name = nameIn.value.trim();
+    const kcal = +ov.querySelector('#qeKcal').value;
+    if (!name || !(kcal >= 0)) { nameIn.focus(); return; }
+    state.settings.quick[i] = {
+      name: name,
+      kcal: Math.round(kcal),
+      p: +(+ov.querySelector('#qeP').value || 0).toFixed(1),
+      f: +(+ov.querySelector('#qeF').value || 0).toFixed(1),
+      c: +(+ov.querySelector('#qeC').value || 0).toFixed(1),
+    };
+    saveState(); buildChips(); ov.remove();
+    toast('Ячейка ' + (i + 1) + ': ' + name);
+  };
+  nameIn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
+  });
+  ov.addEventListener('click', (e) => {
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'save') save();
+    else if (act.dataset.act === 'del') {
+      state.settings.quick[i] = null;
+      saveState(); buildChips(); ov.remove();
+      toast('Ячейка ' + (i + 1) + ' очищена');
+    } else ov.remove();
+  });
 }
 
 /* ---------- История ---------- */
@@ -514,24 +628,16 @@ function init() {
     if (v > 0) { addWater(Math.round(v)); el('#waterInput').value = ''; }
   });
 
-  // Быстрые продукты
+  // Быстрые продукты (20 своих ячеек): клик — добавить с весом, ✎ — изменить, пустая — заполнить
   buildChips();
   el('#quickChips').addEventListener('click', (e) => {
+    const edit = e.target.closest('.chip-edit');
+    if (edit) { quickEditDialog(+edit.dataset.edit); return; }
     const b = e.target.closest('.chip');
     if (!b) return;
-    const q = QUICK_FOOD[+b.dataset.chip];
-    const item = FOOD_DB.find((f) => f.name === q.db);
-    if (!item) return;
-    const k = q.g / 100;
-    day(viewDate, true).foods.push({
-      id: uid(), name: q.db, g: q.g,
-      kcal: Math.round(item.kcal * k),
-      p: +(item.p * k).toFixed(1), f: +(item.f * k).toFixed(1), c: +(item.c * k).toFixed(1),
-      meal: el('#foodMeal').value, time: nowTime(),
-    });
-    saveState();
-    renderDiary();
-    toast('+ ' + q.label + ' · ' + Math.round(item.kcal * k) + ' ккал');
+    const i = +b.dataset.chip;
+    if (state.settings.quick[i]) quickGramsDialog(i);
+    else quickEditDialog(i);
   });
 
   // Подсказки по базе
@@ -763,7 +869,8 @@ function ccApply(srv) {
       settings: {
         ...DEFAULTS,
         ...(srv.settings || {}),
-        profile: { ...DEFAULTS.profile, ...((srv.settings || {}).profile || {}) }
+        profile: { ...DEFAULTS.profile, ...((srv.settings || {}).profile || {}) },
+        quick: normalizeQuick((srv.settings || {}).quick)
       },
       days: srv.days
     };
