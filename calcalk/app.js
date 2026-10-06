@@ -91,11 +91,19 @@ const FOOD_DB = [
   { name: 'Ролл Филадельфия', kcal: 210, p: 8.0, f: 9.0, c: 24.0 },
 ];
 
+// Монохромные линейные иконки приёмов пищи (stroke=currentColor, без заливки)
+function mealSvg(paths) {
+  return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+}
 const MEALS = [
-  { id: 'breakfast', label: 'Завтрак', icon: '🌅' },
-  { id: 'lunch', label: 'Обед', icon: '☀️' },
-  { id: 'dinner', label: 'Ужин', icon: '🌙' },
-  { id: 'snack', label: 'Перекус', icon: '🍏' },
+  { id: 'breakfast', label: 'Завтрак', icon: '🌅',
+    svg: mealSvg('<path d="M3 6.5h8V10a3.5 3.5 0 0 1-3.5 3.5h-1A3.5 3.5 0 0 1 3 10V6.5z"/><path d="M11 7.5h1.2a1.4 1.4 0 0 1 0 2.8H11"/><path d="M5.2 4c0-.8.8-.8.8-1.6"/><path d="M7.6 4c0-.8.8-.8.8-1.6"/>') },
+  { id: 'lunch', label: 'Обед', icon: '☀️',
+    svg: mealSvg('<path d="M2.5 8.5h11a5.5 5.5 0 0 1-11 0z"/><path d="M8 2.8v1.4"/><path d="M4.6 3.8l1 1"/><path d="M11.4 3.8l-1 1"/>') },
+  { id: 'dinner', label: 'Ужин', icon: '🌙',
+    svg: mealSvg('<path d="M2.5 10a5.5 5.5 0 0 1 11 0"/><path d="M2 12.8h12"/><path d="M8 3.2v1.2"/>') },
+  { id: 'snack', label: 'Перекус', icon: '🍏',
+    svg: mealSvg('<circle cx="8" cy="9.8" r="4.3"/><path d="M8 5.5c0-1.6 1.1-2.6 2.6-2.6"/>') },
 ];
 
 const ACTIVITY = [
@@ -370,7 +378,12 @@ function renderMeals() {
     if (!items.length) return '';
     const sub = Math.round(items.reduce((s, f) => s + (+f.kcal || 0), 0));
     return '<div class="meal">' +
-      '<div class="meal-head"><span>' + m.icon + ' ' + m.label + '</span><span>' + sub + ' ккал</span></div>' +
+      '<div class="meal-head">' +
+        '<span class="meal-ico">' + m.svg + '</span>' +
+        '<span class="meal-label">' + m.label + '</span>' +
+        '<span class="meal-sub">' + sub + '</span>' +
+        '<span class="meal-spacer"></span>' +
+      '</div>' +
       items.map((f) =>
         '<div class="entry">' +
         '<span class="entry-time">' + escapeHtml(f.time || '') + '</span>' +
