@@ -91,9 +91,33 @@ const FOOD_DB = [
   { name: 'Ролл Филадельфия', kcal: 210, p: 8.0, f: 9.0, c: 24.0 },
 ];
 
-// Монохромные линейные иконки приёмов пищи (stroke=currentColor, без заливки)
+// Монохромные линейные иконки (stroke=currentColor, без заливки) — общий набор
 function mealSvg(paths) {
   return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+}
+const ICONS = {
+  leaf: mealSvg('<path d="M13 3C7.5 3 4 6 4 10.2c0 1.2.3 2.2.9 3.1C9.8 14.6 14.6 10.5 13 3z"/><path d="M5 12.5C6.5 9.8 8.8 7.3 11.5 5.6"/>'),
+  clipboard: mealSvg('<rect x="3.5" y="3" width="9" height="11" rx="1.5"/><path d="M6 3V1.8h4V3"/><path d="M6 7h4M6 10h4"/>'),
+  moon: mealSvg('<path d="M13.5 9.7A6.1 6.1 0 0 1 6.3 2.5a6.1 6.1 0 1 0 7.2 7.2z"/>'),
+  sun: mealSvg('<circle cx="8" cy="8" r="2.8"/><path d="M8 1.6v1.5M8 12.9v1.5M1.6 8h1.5M12.9 8h1.5M3.5 3.5l1 1M11.5 11.5l1 1M12.5 3.5l-1 1M4.5 11.5l-1 1"/>'),
+  flame: mealSvg('<path d="M8 2c2.4 2.9 4 4.9 4 7.1a4 4 0 0 1-8 0c0-1 .4-2 1.2-2.9.3 1.2 1.4 2 2.3 2C6.7 6.2 7.2 4 8 2z"/>'),
+  droplet: mealSvg('<path d="M8 2.2C5.6 5.4 4 7.6 4 9.8a4 4 0 0 0 8 0c0-2.2-1.6-4.4-4-7.6z"/>'),
+  macro: mealSvg('<path d="M3 13V8M8 13V3.5M13 13V6.5"/>'),
+  bowl: mealSvg('<path d="M2.5 8.5h11a5.5 5.5 0 0 1-11 0z"/><path d="M8 2.8v1.4"/><path d="M4.6 3.8l1 1"/><path d="M11.4 3.8l-1 1"/>'),
+  user: mealSvg('<circle cx="8" cy="5.3" r="2.6"/><path d="M2.9 13.6a5.1 5.1 0 0 1 10.2 0"/>'),
+  target: mealSvg('<circle cx="8" cy="8" r="5.6"/><circle cx="8" cy="8" r="2"/>'),
+  data: mealSvg('<ellipse cx="8" cy="4" rx="4.8" ry="1.9"/><path d="M3.2 4v8c0 1 2.2 1.9 4.8 1.9s4.8-.9 4.8-1.9V4"/>'),
+  download: mealSvg('<path d="M8 2.5v7M5 7l3 3 3-3"/><path d="M3 12.8h10"/>'),
+  upload: mealSvg('<path d="M8 10.2v-7M5 6l3-3 3 3"/><path d="M3 12.8h10"/>'),
+  trash: mealSvg('<path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.5 4.5l.7 8.8h5.6l.7-8.8"/>'),
+  calc: mealSvg('<rect x="3" y="2.5" width="10" height="11" rx="1.5"/><path d="M5.5 5.5h5M5.5 8.4h2M8.5 8.4h2M5.5 11.3h2M8.5 11.3h2"/>'),
+  sync: mealSvg('<path d="M13.2 8A5.2 5.2 0 1 1 11 3.7"/><path d="M11.2 1.6l.2 2.6 2.5-.6"/>'),
+  chart: mealSvg('<path d="M3 13.2h10M4.7 13.2V9M8 13.2V5.3M11.3 13.2V7.3"/>'),
+  list: mealSvg('<path d="M3 4.3h.8M6 4.3h7M3 8h.8M6 8h7M3 11.7h.8M6 11.7h7"/>'),
+  sliders: mealSvg('<path d="M3 5.2h7.3M12.7 5.2h.3M3 11h.3M7.7 11h5.3"/><circle cx="11.5" cy="5.2" r="1.7"/><circle cx="6.2" cy="11" r="1.7"/>'),
+};
+function icoWrap(name, cls) {
+  return '<span class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true">' + ICONS[name] + '</span>';
 }
 const MEALS = [
   { id: 'breakfast', label: 'Завтрак', icon: '🌅',
@@ -279,7 +303,22 @@ function toast(msg) {
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  el('#themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  el('#themeBtn').innerHTML = icoWrap(t === 'dark' ? 'sun' : 'moon');
+}
+
+// Переключатель приёма пищи: кнопки с монохромными иконками (вместо <select>)
+function buildMealPicker(wrap, input) {
+  if (!wrap || !input) return;
+  wrap.innerHTML = MEALS.map((m) =>
+    '<button type="button" class="mp-btn' + (m.id === input.value ? ' active' : '') + '" data-meal="' + m.id + '" title="' + m.label + '">' +
+    m.svg + '<span>' + m.label + '</span></button>'
+  ).join('');
+  wrap.querySelectorAll('.mp-btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      input.value = b.dataset.meal;
+      wrap.querySelectorAll('.mp-btn').forEach((x) => x.classList.toggle('active', x === b));
+    });
+  });
 }
 
 /* ---------- Дневник ---------- */
@@ -370,7 +409,7 @@ function renderMeals() {
   const foods = (state.days[viewDate] || {}).foods || [];
   const box = el('#mealList');
   if (!foods.length) {
-    box.innerHTML = '<div class="empty">Пока ничего не добавлено.<br>Воспользуйтесь быстрыми кнопками или формой выше 🙂</div>';
+    box.innerHTML = '<div class="empty">Пока ничего не добавлено.<br>Воспользуйтесь быстрыми кнопками или формой выше</div>';
     return;
   }
   box.innerHTML = MEALS.map((m) => {
@@ -402,7 +441,7 @@ function addWater(ml) {
   day(viewDate, true).water.push({ id: uid(), ml, time: nowTime() });
   saveState();
   renderDiary();
-  toast('+' + ml + ' мл 💧');
+  toast('+' + ml + ' мл');
 }
 
 /* ---------- Еда: форма, подсказки, быстрые кнопки ---------- */
@@ -474,15 +513,15 @@ function quickGramsDialog(i) {
     '<p class="hint" style="margin:0 0 10px">' + it.kcal + ' ккал · Б ' + it.p + ' / Ж ' + it.f + ' / У ' + it.c + ' на 100 г</p>' +
     '<div class="food-grid">' +
       '<label>Вес, г<input id="qdGrams" type="number" min="1" step="1" value="100"></label>' +
-      '<label>Приём пищи<select id="qdMeal">' +
-        MEALS.map((m) => '<option value="' + m.id + '"' + (m.id === el('#foodMeal').value ? ' selected' : '') + '>' + m.icon + ' ' + m.label + '</option>').join('') +
-      '</select></label>' +
+      '<label>Приём пищи<div class="meal-picker" id="qdMealPicker"></div></label>' +
+      '<input type="hidden" id="qdMeal" value="' + (el('#foodMeal') ? el('#foodMeal').value : 'lunch') + '">' +
     '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
       '<button class="btn" data-act="cancel">Отмена</button>' +
       '<button class="btn primary" data-act="add">Добавить</button>' +
     '</div>');
   const input = ov.querySelector('#qdGrams');
+  buildMealPicker(ov.querySelector('#qdMealPicker'), ov.querySelector('#qdMeal'));
   input.focus(); input.select();
   const add = () => {
     const g = Math.round(+input.value);
@@ -646,7 +685,7 @@ function renderHistory() {
   }
 
   if (rows.length === 1 && rows[0].t.kcal === 0 && rows[0].t.water === 0) {
-    box.innerHTML = '<div class="empty">История появится после первых записей 📈</div>';
+    box.innerHTML = '<div class="empty">История появится после первых записей</div>';
     return;
   }
 
@@ -838,15 +877,20 @@ function init() {
   // Селекты
   el('#inActivity').innerHTML = ACTIVITY.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
   el('#inAim').innerHTML = AIM.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
-  el('#foodMeal').innerHTML = MEALS.map((m) => '<option value="' + m.id + '">' + m.icon + ' ' + m.label + '</option>').join('');
+
+  // Монохромные иконки в статичной разметке: <span class="ic" data-ico="имя"></span>
+  document.querySelectorAll('[data-ico]').forEach((s) => {
+    if (ICONS[s.dataset.ico]) s.innerHTML = ICONS[s.dataset.ico];
+  });
 
   // Кнопка синхронизации в карточке аккаунта
   var ccSyncBtn = document.getElementById('ccSyncBtn');
   if (ccSyncBtn) ccSyncBtn.addEventListener('click', ccSyncNow);
 
-  // Приём пищи по умолчанию — по времени суток
+  // Приём пищи по умолчанию — по времени суток; переключатель с монохромными иконками
   const h = new Date().getHours();
   el('#foodMeal').value = h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack';
+  buildMealPicker(el('#mealPicker'), el('#foodMeal'));
 
   // Вкладки
   document.querySelectorAll('.tab').forEach((t) =>

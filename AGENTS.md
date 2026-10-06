@@ -9,7 +9,11 @@ TODOCITY — веб-приложение для ведения списков д
 без сборки и фреймворков: `index.html` + `style.css` + `main.js` + векторный логотип
 `logo-todocity.svg` (вектор из CorelDRAW, имя файла без пробелов). **В подпапке `calcalk/`
 живёт второе приложение — КалКалк (трекер калорий и воды, тоже чистая статика:
-index.html + styles.css + app.js, localStorage `calcalk_v1`)**. Приложения объединены:
+index.html + styles.css + app.js, localStorage `calcalk_v1`)**. Иконки в КалКалке —
+только монохромные линейные SVG (словарь ICONS + `icoWrap()` в app.js; в статике —
+`<span class="ic" data-ico="…">`), эмодзи в UI не использовать; «Приём пищи» —
+сегментный переключатель buildMealPicker (SVG в нативном select невозможен),
+скрытые инпуты #foodMeal/#qdMeal сохраняют `.value`-API. Приложения объединены:
 кнопка 🍴 в ряду кнопок даты TODOCITY → `calcalk/`, кнопка 📋 в шапке КалКалка → `../`;
 единый аккаунт (общий origin = общий localStorage: КалКалк показывает логин из
 `todo-app-v47-login` в своих настройках). Данные TODOCITY — в localStorage
@@ -22,8 +26,8 @@ index.html + styles.css + app.js, localStorage `calcalk_v1`)**. Приложен
 
 1. **Версионирование ресурсов.** При ЛЮБОЙ правке `style.css` или `main.js` поднять версию
    в ссылках `index.html`: `style.css?v=N`, `main.js?v=N`. Иначе браузер (в т.ч. встроенный
-   IAB) отдаёт кешированную старую версию. Текущие версии (сверено 05.10.2026): **style.css?v=43,
-   main.js?v=45**; calcalk: styles.css?v=9, app.js?v=12.
+   IAB) отдаёт кешированную старую версию. Текущие версии (сверено 06.10.2026): **style.css?v=43,
+   main.js?v=45**; calcalk: styles.css?v=10, app.js?v=13.
 2. **Формат дат.** Хранить даты только как локальную полночь: хелпер `localMidnightISO(d)`.
    Никогда не использовать `toISOString().split('T')[0]` — это UTC, даёт смещение на день
    в таймзонах восточнее UTC. Для полей `<input type="date">` — хелпер `toLocalISODate(d)`.
