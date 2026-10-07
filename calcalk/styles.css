@@ -525,7 +525,12 @@ input::placeholder { color: var(--muted); opacity: .7; }
 
 /* ---------- Форма добавления еды ---------- */
 
-.food-name-wrap { position: relative; margin: 15px 0; }
+.food-name-wrap {
+  position: relative;
+  margin: 15px 0;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
 
 .food-grid {
   display: grid;
