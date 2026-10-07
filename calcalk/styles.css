@@ -806,7 +806,6 @@ h2 .ic, h3 .ic { opacity: 0.7; }
    рамка + радиус 16 + отступ 14px сверху = разрыв как между карточками */
 .food-form {
   margin-top: 14px;
-  padding: 16px;
   background: var(--card);
   border-radius: 16px;
 }
