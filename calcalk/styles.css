@@ -804,16 +804,13 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   padding: 15px 13px 15px 58px;
   font-size: 17px;
   font-weight: 600;
-  background: #fdefe4;
-  border-color: var(--kcal);
-}
-[data-theme="dark"] .food-name-wrap input {
-  background: #2b2117;
+  background: var(--bg-inset);
+  border-color: #000;
 }
 .food-name-wrap input::placeholder {
   font-weight: 600;
   font-size: 17px;
-  color: var(--kcal);
+  color: #000;
   opacity: 1;
   text-transform: uppercase;
   letter-spacing: .04em;
@@ -833,6 +830,9 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   opacity: 1;
   pointer-events: none;
 }
+[data-theme="dark"] .food-name-wrap input { border-color: var(--text); }
+[data-theme="dark"] .food-name-wrap input::placeholder { color: var(--text); }
+
 /* Кнопка «Добавить в дневник»: приглушена, пока нечего добавлять;
    оранжевый градиент (.btn.primary) — только с классом ready */
 #addFoodBtn {
