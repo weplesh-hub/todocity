@@ -801,7 +801,9 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 
 /* Поле продукта — главный ввод формы: крупнее, с иконкой поиска, читаемый плейсхолдер */
 .food-name-wrap input {
-  padding: 13px 13px 13px 42px;
+  height: 54px;
+  padding: 0 13px 0 42px;
+  line-height: 52px;
   font-size: 17px;
   font-weight: 600;
   background: #fdefe4;
@@ -813,6 +815,7 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 .food-name-wrap input::placeholder {
   font-weight: 600;
   font-size: 14px;
+  line-height: 52px;
   color: var(--kcal);
   opacity: 1;
   text-transform: uppercase;
@@ -826,8 +829,8 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   margin: 0;
   width: 16px;
   height: 16px;
-  color: var(--muted);
-  opacity: .8;
+  color: var(--kcal);
+  opacity: 1;
   pointer-events: none;
 }
 /* Кнопка «Добавить в дневник»: приглушена, пока нечего добавлять;
