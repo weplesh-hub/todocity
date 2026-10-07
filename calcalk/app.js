@@ -535,19 +535,36 @@ function qdOverlay(html) {
 function quickGramsDialog(i) {
   const it = state.settings.quick[i];
   const ov = qdOverlay(
-    '<h3 class="card-title">🍽 ' + escapeHtml(it.name) + '</h3>' +
-    '<p class="hint" style="margin:0 0 10px">' + it.kcal + ' ккал · Б ' + it.p + ' / Ж ' + it.f + ' / У ' + it.c + ' на 100 г</p>' +
-    '<div class="food-grid">' +
-      '<label>Вес, г<input id="qdGrams" type="number" min="1" step="1" value="100"></label>' +
-      '<label class="span2">Приём пищи<div class="meal-picker" id="qdMealPicker"></div></label>' +
-      '<input type="hidden" id="qdMeal" value="' + (el('#foodMeal') ? el('#foodMeal').value : 'lunch') + '">' +
+    '<div class="qd-head">' +
+      '<span class="qd-plate">' + icoWrap('utensils') + '</span>' +
+      '<div class="qd-head-text">' +
+        '<div class="qd-name">' + escapeHtml(it.name) + '</div>' +
+        '<div class="qd-macros">' + it.kcal + ' ккал / 100 г · Б ' + it.p + ' · Ж ' + it.f + ' · У ' + it.c + '</div>' +
+      '</div>' +
     '</div>' +
-    '<div class="btn-row" style="margin-top:12px">' +
-      '<button class="btn" data-act="cancel">Отмена</button>' +
-      '<button class="btn primary" data-act="add">Добавить</button>' +
-    '</div>');
+    '<div class="qd-sec">Вес, г</div>' +
+    '<div class="qd-weight">' +
+      '<button type="button" class="qd-step" data-step="-10" aria-label="Меньше">−</button>' +
+      '<input id="qdGrams" type="number" min="1" step="1" value="100" inputmode="numeric">' +
+      '<button type="button" class="qd-step" data-step="10" aria-label="Больше">+</button>' +
+    '</div>' +
+    '<div class="qd-quick-g">' +
+      ['50', '100', '150', '200', '250'].map((g) => '<button type="button" data-g="' + g + '">' + g + '</button>').join('') +
+    '</div>' +
+    '<div class="qd-sec">Приём пищи</div>' +
+    '<div class="meal-picker" id="qdMealPicker"></div>' +
+    '<input type="hidden" id="qdMeal" value="' + (el('#foodMeal') ? el('#foodMeal').value : 'lunch') + '">' +
+    '<button class="btn primary qd-add" data-act="add">Добавить</button>' +
+    '<button type="button" class="qd-cancel" data-act="cancel">Отмена</button>');
   const input = ov.querySelector('#qdGrams');
   buildMealPicker(ov.querySelector('#qdMealPicker'), ov.querySelector('#qdMeal'));
+  ov.querySelectorAll('.qd-step').forEach((b) => b.addEventListener('click', () => {
+    const v = Math.max(1, Math.round((+input.value || 0) + (+b.dataset.step)));
+    input.value = v; input.focus();
+  }));
+  ov.querySelectorAll('.qd-quick-g button').forEach((b) => b.addEventListener('click', () => {
+    input.value = b.dataset.g; input.focus();
+  }));
   input.focus(); input.select();
   const add = () => {
     const g = Math.round(+input.value);
