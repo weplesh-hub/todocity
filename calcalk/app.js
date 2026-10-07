@@ -484,13 +484,26 @@ function pickFood(item) {
 }
 
 // Кнопка «Добавить в дневник» — акцент (класс ready) только когда форма заполнена:
-// есть название и валидная калорийность (на 100 г; 0 допустим)
+// есть название и валидная калорийность (на 100 г; 0 допустим).
+// «Отмена» видна, когда в форме есть хоть что-то — есть что отменять.
 function updateAddBtn() {
   const b = el('#addFoodBtn');
   if (!b) return;
   const name = el('#foodName').value.trim();
   const kcal = parseFloat(el('#foodKcal').value);
   b.classList.toggle('ready', !!name && isFinite(kcal) && kcal >= 0);
+  const dirty = ['foodName', 'foodGrams', 'foodKcal', 'foodP', 'foodF', 'foodC'].some((id) => el('#' + id).value !== '');
+  const c = el('#cancelFoodBtn');
+  if (c) c.hidden = !dirty;
+}
+
+// Отмена ввода: очистить форму, погасить кнопку добавления, вернуться к пустому состоянию
+function cancelFoodForm() {
+  ['foodName', 'foodGrams', 'foodKcal', 'foodP', 'foodF', 'foodC'].forEach((id) => { el('#' + id).value = ''; });
+  activeFood = null;
+  closeSuggest();
+  updateAddBtn();
+  el('#foodName').focus();
 }
 
 function buildChips() {
@@ -955,6 +968,7 @@ function init() {
   // Подсказки по базе
   el('#foodName').addEventListener('input', () => { activeFood = null; renderSuggest(); });
   el('#foodForm').addEventListener('input', updateAddBtn);
+  el('#cancelFoodBtn').addEventListener('click', cancelFoodForm);
   updateAddBtn();
   el('#suggestBox').addEventListener('click', (e) => {
     const it = e.target.closest('.suggest-item');
