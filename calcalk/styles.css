@@ -527,7 +527,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
 
 .food-name-wrap {
   position: relative;
-  margin: 14px 0;
+  margin: 0 0 14px;
 }
 
 .food-grid {
@@ -801,6 +801,15 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 }
 
 /* ---------- Поле продукта + кнопка «Добавить в дневник» ---------- */
+
+/* Форма ввода продукта — отдельный блок-подложка (как карточка, только внутри «Еда»):
+   рамка + радиус 16 + отступ 14px сверху = разрыв как между карточками */
+.food-form {
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: 16px;
+}
 
 /* Поле продукта — главный ввод формы: крупнее, с иконкой поиска, читаемый плейсхолдер */
 .food-name-wrap input {
