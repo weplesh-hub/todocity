@@ -804,11 +804,11 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   padding: 13px 13px 13px 42px;
   font-size: 17px;
   font-weight: 600;
-  background: #e9eff8;
+  background: #fdefe4;
   border-color: var(--kcal);
 }
 [data-theme="dark"] .food-name-wrap input {
-  background: #1c2a3e;
+  background: #2b2117;
 }
 .food-name-wrap input::placeholder {
   font-weight: 600;
