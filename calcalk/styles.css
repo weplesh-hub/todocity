@@ -805,17 +805,18 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   font-size: 17px;
   font-weight: 600;
   background: #e9eff8;
-  border-color: #cfdded;
+  border-color: var(--kcal);
 }
 [data-theme="dark"] .food-name-wrap input {
   background: #1c2a3e;
-  border-color: #2b3c58;
 }
 .food-name-wrap input::placeholder {
-  font-weight: 400;
-  font-size: 15.5px;
-  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--kcal);
   opacity: 1;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 .food-name-wrap .field-ic {
   position: absolute;
