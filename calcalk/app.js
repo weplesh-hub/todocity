@@ -115,6 +115,7 @@ const ICONS = {
   chart: mealSvg('<path d="M3 13.2h10M4.7 13.2V9M8 13.2V5.3M11.3 13.2V7.3"/>'),
   list: mealSvg('<path d="M3 4.3h.8M6 4.3h7M3 8h.8M6 8h7M3 11.7h.8M6 11.7h7"/>'),
   sliders: mealSvg('<path d="M3 5.2h7.3M12.7 5.2h.3M3 11h.3M7.7 11h5.3"/><circle cx="11.5" cy="5.2" r="1.7"/><circle cx="6.2" cy="11" r="1.7"/>'),
+  search: mealSvg('<circle cx="7" cy="7" r="4.2"/><path d="M10.3 10.3 13.4 13.4"/>'),
 };
 function icoWrap(name, cls) {
   return '<span class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true">' + ICONS[name] + '</span>';
@@ -479,6 +480,17 @@ function pickFood(item) {
   el('#foodF').value = item.f;
   el('#foodC').value = item.c;
   el('#foodGrams').focus();
+  updateAddBtn();
+}
+
+// Кнопка «Добавить в дневник» — акцент (класс ready) только когда форма заполнена:
+// есть название и валидная калорийность (на 100 г; 0 допустим)
+function updateAddBtn() {
+  const b = el('#addFoodBtn');
+  if (!b) return;
+  const name = el('#foodName').value.trim();
+  const kcal = parseFloat(el('#foodKcal').value);
+  b.classList.toggle('ready', !!name && isFinite(kcal) && kcal >= 0);
 }
 
 function buildChips() {
@@ -942,6 +954,8 @@ function init() {
 
   // Подсказки по базе
   el('#foodName').addEventListener('input', () => { activeFood = null; renderSuggest(); });
+  el('#foodForm').addEventListener('input', updateAddBtn);
+  updateAddBtn();
   el('#suggestBox').addEventListener('click', (e) => {
     const it = e.target.closest('.suggest-item');
     if (it) pickFood(getFoodDB()[+it.dataset.i]);
@@ -974,6 +988,7 @@ function init() {
     ['foodName', 'foodGrams', 'foodKcal', 'foodP', 'foodF', 'foodC'].forEach((id) => { el('#' + id).value = ''; });
     activeFood = null;
     closeSuggest();
+    updateAddBtn();
   });
 
   // Удаление записей и закрытие подсказок (делегирование)

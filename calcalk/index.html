@@ -20,7 +20,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 
@@ -115,7 +115,8 @@
 
       <form id="foodForm" class="food-form" autocomplete="off">
         <div class="food-name-wrap">
-          <input id="foodName" placeholder="Название продукта или поиск по базе">
+          <span class="ic field-ic" data-ico="search"></span>
+          <input id="foodName" placeholder="Продукт или поиск по базе">
           <div class="suggest" id="suggestBox"></div>
         </div>
         <div class="food-grid">
@@ -126,7 +127,7 @@
           <label>Углеводы / 100 г<input id="foodC" type="number" min="0" step="0.1" placeholder="—"></label>
           <label class="span2">Приём пищи<div class="meal-picker" id="mealPicker"></div><input type="hidden" id="foodMeal" value=""></label>
         </div>
-        <button class="btn primary wide" type="submit">Добавить в дневник</button>
+        <button class="btn primary wide" type="submit" id="addFoodBtn">Добавить в дневник</button>
       </form>
 
       <div id="mealList"></div>
@@ -213,6 +214,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=13"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

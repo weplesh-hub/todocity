@@ -796,3 +796,44 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   border-color: var(--muted);
   box-shadow: 0 1px 3px rgba(0,0,0,.12);
 }
+
+/* ---------- Поле продукта + кнопка «Добавить в дневник» ---------- */
+
+/* Поле продукта — главный ввод формы: крупнее, с иконкой поиска, читаемый плейсхолдер */
+.food-name-wrap input {
+  padding: 13px 13px 13px 42px;
+  font-size: 17px;
+  font-weight: 600;
+}
+.food-name-wrap input::placeholder {
+  font-weight: 400;
+  font-size: 15.5px;
+  color: var(--muted);
+  opacity: 1;
+}
+.food-name-wrap .field-ic {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  opacity: .8;
+  pointer-events: none;
+}
+/* Кнопка «Добавить в дневник»: приглушена, пока нечего добавлять;
+   оранжевый градиент (.btn.primary) — только с классом ready */
+#addFoodBtn {
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+#addFoodBtn:hover { border-color: var(--muted); }
+#addFoodBtn.ready {
+  background: linear-gradient(135deg, #ff8a3d, #ff6a2b);
+  border: none;
+  color: #fff;
+}
+#addFoodBtn.ready:hover { border: none; }
