@@ -539,7 +539,7 @@ function quickGramsDialog(i) {
     '<p class="hint" style="margin:0 0 10px">' + it.kcal + ' ккал · Б ' + it.p + ' / Ж ' + it.f + ' / У ' + it.c + ' на 100 г</p>' +
     '<div class="food-grid">' +
       '<label>Вес, г<input id="qdGrams" type="number" min="1" step="1" value="100"></label>' +
-      '<label>Приём пищи<div class="meal-picker" id="qdMealPicker"></div></label>' +
+      '<label class="span2">Приём пищи<div class="meal-picker" id="qdMealPicker"></div></label>' +
       '<input type="hidden" id="qdMeal" value="' + (el('#foodMeal') ? el('#foodMeal').value : 'lunch') + '">' +
     '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
