@@ -102,8 +102,8 @@ body {
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--card);
@@ -747,19 +747,19 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .ic {
   display: inline-flex;
   align-items: center;
-  width: 14px;
-  height: 14px;
-  margin-right: 7px;
-  vertical-align: -2px;
+  width: 21px;
+  height: 21px;
+  margin-right: 8px;
+  vertical-align: -3px;
   color: inherit;
   opacity: 0.75;
   flex-shrink: 0;
 }
 .ic svg { width: 100%; height: 100%; }
-.ic.big { width: 18px; height: 18px; vertical-align: -3px; }
+.ic.big { width: 27px; height: 27px; vertical-align: -5px; }
 .btn .ic { opacity: 0.8; }
 .card-title .ic { margin-right: 8px; }
-.brand .ic { width: 17px; height: 17px; margin-right: 8px; opacity: 1; }
+.brand .ic { width: 25px; height: 25px; margin-right: 9px; opacity: 1; }
 #themeBtn, a.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
 #themeBtn .ic, a.icon-btn .ic { margin: 0; opacity: 1; }
 .ring-title .ic { margin-right: 6px; }
@@ -788,7 +788,7 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   cursor: pointer;
   transition: color .15s, background .15s, border-color .15s;
 }
-.mp-btn svg { width: 15px; height: 15px; }
+.mp-btn svg { width: 22px; height: 22px; }
 .mp-btn:hover { color: var(--text); }
 .mp-btn.active {
   color: var(--text);
@@ -823,12 +823,12 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 }
 .food-name-wrap .field-ic {
   position: absolute;
-  left: 14px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   margin: 0;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   color: var(--kcal);
   opacity: 1;
   pointer-events: none;
