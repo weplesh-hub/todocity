@@ -116,6 +116,7 @@ const ICONS = {
   list: mealSvg('<path d="M3 4.3h.8M6 4.3h7M3 8h.8M6 8h7M3 11.7h.8M6 11.7h7"/>'),
   sliders: mealSvg('<path d="M3 5.2h7.3M12.7 5.2h.3M3 11h.3M7.7 11h5.3"/><circle cx="11.5" cy="5.2" r="1.7"/><circle cx="6.2" cy="11" r="1.7"/>'),
   search: mealSvg('<circle cx="7" cy="7" r="4.2"/><path d="M10.3 10.3 13.4 13.4"/>'),
+  utensils: mealSvg('<path d="M3.1 2.4v3.9c0 1.2 1 2.2 2.2 2.2h.6c1.2 0 2.2-1 2.2-2.2V2.4"/><path d="M5.6 2.4v11.4"/><path d="M10.3 9.9V2.6c1.9.9 3.1 2.8 3.1 5.1v2.2h-3.1z"/><path d="M11.85 9.9v3.9"/>'),
 };
 function icoWrap(name, cls) {
   return '<span class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true">' + ICONS[name] + '</span>';
