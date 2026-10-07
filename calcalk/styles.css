@@ -827,7 +827,7 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   width: 36px;
   height: 36px;
   padding: 6px;
-  border-radius: 8.5px;
+  border-radius: 7.65px;
   background: var(--kcal);
   color: #fdefe4;
   opacity: 1;
