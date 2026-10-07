@@ -803,7 +803,7 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 .food-name-wrap input {
   height: 54px;
   padding: 0 13px 0 58px;
-  line-height: 52px;
+  line-height: 46px;
   font-size: 17px;
   font-weight: 600;
   background: #fdefe4;
