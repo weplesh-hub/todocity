@@ -828,12 +828,11 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   height: 36px;
   padding: 6px;
   border-radius: 7.65px;
-  background: var(--kcal);
+  background: #000;
   color: #fdefe4;
   opacity: 1;
   pointer-events: none;
 }
-[data-theme="dark"] .food-name-wrap .field-ic { color: #2b2117; }
 /* Кнопка «Добавить в дневник»: приглушена, пока нечего добавлять;
    оранжевый градиент (.btn.primary) — только с классом ready */
 #addFoodBtn {
