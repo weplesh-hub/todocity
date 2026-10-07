@@ -830,6 +830,11 @@ h2 .ic, h3 .ic { opacity: 0.7; }
   opacity: 1;
   pointer-events: none;
 }
+/* тёмная тема: плашка белая, приборы чёрные (инверсия) */
+[data-theme="dark"] .food-name-wrap .field-ic {
+  background: #fff;
+  color: #000;
+}
 [data-theme="dark"] .food-name-wrap input { border-color: var(--text); }
 [data-theme="dark"] .food-name-wrap input::placeholder { color: var(--text); }
 /* активное поле — белая заливка (в тёмной теме текст инвертируется в чёрный) */
