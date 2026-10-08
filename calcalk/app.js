@@ -116,6 +116,8 @@ const ICONS = {
   list: mealSvg('<path d="M3 4.3h.8M6 4.3h7M3 8h.8M6 8h7M3 11.7h.8M6 11.7h7"/>'),
   sliders: mealSvg('<path d="M3 5.2h7.3M12.7 5.2h.3M3 11h.3M7.7 11h5.3"/><circle cx="11.5" cy="5.2" r="1.7"/><circle cx="6.2" cy="11" r="1.7"/>'),
   search: mealSvg('<circle cx="7" cy="7" r="4.2"/><path d="M10.3 10.3 13.4 13.4"/>'),
+  cross: mealSvg('<path d="M8 1.8v12.4"/><path d="M5.3 4.4h5.4"/><path d="M3 7.3h10"/><path d="M6.1 10.5l3.8 2.4"/>'),
+  check: mealSvg('<path d="M3.2 8.5l3.3 3.4 6.3-7.8"/>'),
   utensils: mealSvg('<path d="M3.1 2.4v3.9c0 1.2 1 2.2 2.2 2.2h.6c1.2 0 2.2-1 2.2-2.2V2.4"/><path d="M5.6 2.4v11.4"/><path d="M10.3 9.9V2.6c1.9.9 3.1 2.8 3.1 5.1v2.2h-3.1z"/><path d="M11.85 9.9v3.9"/>'),
 };
 function icoWrap(name, cls) {
@@ -325,6 +327,51 @@ function buildMealPicker(wrap, input) {
 
 /* ---------- Дневник ---------- */
 
+// ——— Православные посты (упрощённый устав: мясо/алкоголь) ———
+// Пасха по юлианской пасхалии, переведённая в новый стиль (+13 дней в XXI веке)
+function easterNS(y) {
+  const a = y % 4, b = y % 7, c = y % 19;
+  const d = (19 * c + 15) % 30, e = (2 * a + 4 * b - d + 34) % 7;
+  const month = Math.floor((d + e + 114) / 31);
+  const day = ((d + e + 114) % 31) + 1;
+  return new Date(y, month - 1, day + 13);
+}
+// level: fast — мясо и алкоголь исключаются; nomeat — мясо нельзя, алкоголь можно;
+// none — ограничений нет. title — название периода (пусто для обычного дня).
+function fastStatus(date) {
+  const md = (date.getMonth() + 1) * 100 + date.getDate();
+  const dow = date.getDay();
+  const E = easterNS(date.getFullYear());
+  const u = (x) => Date.UTC(x.getFullYear(), x.getMonth(), x.getDate());
+  const n = Math.round((u(date) - u(E)) / 86400000); // дней от Пасхи (может быть отрицательным)
+  if (n >= 0 && n <= 6) return { level: 'none', title: 'Светлая седмица' };
+  if (n >= 49 && n <= 55) return { level: 'none', title: 'Троицкая седмица' };
+  if (n >= -69 && n <= -63) return { level: 'none', title: 'Седмица мытаря и фарисея' };
+  if (n >= -55 && n <= -49) return { level: 'nomeat', title: 'Сырная седмица (Масленица)' };
+  if (n >= -48 && n <= -1) return { level: 'fast', title: 'Великий пост' };
+  if (n >= 57 && md <= 711) return { level: 'fast', title: 'Петров пост' };
+  if (md >= 814 && md <= 827) return { level: 'fast', title: 'Успенский пост' };
+  if (md >= 1128 || md <= 106) return { level: 'fast', title: 'Рождественский пост' };
+  if (md >= 107 && md <= 117) return { level: 'none', title: 'Святки' };
+  if (md === 118) return { level: 'fast', title: 'Крещенский сочельник' };
+  if (md === 911) return { level: 'fast', title: 'Усекновение главы Иоанна Предтечи' };
+  if (md === 927) return { level: 'fast', title: 'Воздвижение Креста Господня' };
+  if (dow === 3 || dow === 5) return { level: 'fast', title: dow === 3 ? 'Постная среда' : 'Постная пятница' };
+  return { level: 'none', title: '' };
+}
+function renderFastBanner() {
+  const b = el('#fastBanner');
+  if (!b) return;
+  const st = fastStatus(fromISO(viewDate));
+  b.hidden = false;
+  b.className = 'card fast-banner ' + st.level;
+  const hint = st.level === 'fast' ? 'мясо и алкоголь — нельзя' :
+               st.level === 'nomeat' ? 'мясо — нельзя, алкоголь — можно' :
+               'мясо и алкоголь — можно';
+  b.innerHTML = '<span class="ic fb-ic">' + (st.level === 'none' ? ICONS.check : ICONS.cross) + '</span>' +
+    '<div class="fb-text">' + (st.title ? '<b>' + st.title + '</b> · ' : '') + hint + '</div>';
+}
+
 function renderDiary() {
   const t = dayTotals(viewDate);
   const today = todayISO();
@@ -338,6 +385,7 @@ function renderDiary() {
   else main = fmtDayMonth.format(fromISO(viewDate));
   el('#dateMain').textContent = main;
   el('#dateSub').textContent = fmtFull.format(fromISO(viewDate));
+  renderFastBanner();
   el('#nextDay').disabled = viewDate >= today;
 
   // Кольцо калорий
