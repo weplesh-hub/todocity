@@ -1021,7 +1021,9 @@ function init() {
     w.className = 'wq-water';
     w.style.setProperty('--lvl', lvl + '%');
     w.innerHTML = '<svg class="wq-wave" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true">' +
-      '<path d="M0 8 V4 Q7.5 0 15 4 T30 4 T45 4 T60 4 T75 4 T90 4 T105 4 T120 4 V8 Z"/></svg>';
+      '<path d="M0 8 V4 Q7.5 0 15 4 T30 4 T45 4 T60 4 T75 4 T90 4 T105 4 T120 4 V8 Z"/>' +
+      '<path class="wq-crest" d="M0 4 Q7.5 0 15 4 T30 4 T45 4 T60 4 T75 4 T90 4 T105 4 T120 4" fill="none"/>' +
+      '</svg><span class="wq-body"></span>';
     b.appendChild(w);
   });
   document.querySelectorAll('.water-quick').forEach((b) =>

@@ -993,19 +993,23 @@ body:has(.qd-overlay) { overflow: hidden; }
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: var(--lvl, 40%);
-  background: rgba(59, 158, 255, .22);
   pointer-events: none;
 }
+/* волна [0..8px] и тело воды [8px..дно] — вплотную, без наложения:
+   наложение полупрозрачных слоёв давало тёмную прямую полосу под волной */
 .wq-wave {
   position: absolute;
-  top: -7px; left: 0;
+  top: 0; left: 0;
   width: 200%;
   height: 8px;
   display: block;
   animation: wqFlow 4s linear infinite;
 }
 .wq-wave path { fill: rgba(59, 158, 255, .22); }
+.wq-crest { stroke: rgba(255, 255, 255, .55); stroke-width: 1.2; }
+.wq-body { position: absolute; left: 0; right: 0; top: 8px; bottom: 0; background: rgba(59, 158, 255, .22); }
 @keyframes wqFlow { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-[data-theme="dark"] .wq-water { background: rgba(84, 173, 255, .18); }
 [data-theme="dark"] .wq-wave path { fill: rgba(84, 173, 255, .18); }
+[data-theme="dark"] .wq-body { background: rgba(84, 173, 255, .18); }
+[data-theme="dark"] .wq-crest { stroke: rgba(255, 255, 255, .45); }
 @media (prefers-reduced-motion: reduce) { .wq-wave { animation: none; } }
