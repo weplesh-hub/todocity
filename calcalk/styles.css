@@ -767,7 +767,13 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .btn .ic { opacity: 0.8; }
 .card-title .ic { margin-right: 8px; }
 .brand .ic { width: 25px; height: 25px; margin-right: 9px; opacity: 1; }
-#themeBtn, a.icon-btn { display: inline-flex; align-items: center; justify-content: center; }
+#themeBtn, a.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text); /* контуры иконок: без этого кнопка берёт системный цвет и в тёмной теме нечитаема */
+  text-decoration: none;
+}
 #themeBtn .ic, a.icon-btn .ic { margin: 0; opacity: 1; }
 .ring-title .ic { margin-right: 6px; }
 h2 .ic, h3 .ic { opacity: 0.7; }
