@@ -20,7 +20,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=38">
+<link rel="stylesheet" href="styles.css?v=39">
 </head>
 <body>
 
@@ -205,6 +205,15 @@
     </div>
 
     <div class="card">
+    <div class="card">
+      <h3 class="card-title"><span class="ic" data-ico="cross"></span>Индикатор поста</h3>
+      <label class="switch-row">
+        <span>Показывать пост в дневнике<small>Православный календарь: можно ли сегодня мясо и алкоголь</small></span>
+        <input type="checkbox" id="inFastBanner" checked>
+      </label>
+    </div>
+
+    <div class="card">
       <h3 class="card-title"><span class="ic" data-ico="data"></span>Данные</h3>
       <p class="hint">Все записи хранятся только в этом браузере (localStorage). Для переноса на другое устройство или резервной копии используйте экспорт в JSON-файл.</p>
       <div class="btn-row">
@@ -219,6 +228,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>

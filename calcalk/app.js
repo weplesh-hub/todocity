@@ -160,6 +160,7 @@ const DEFAULTS = {
   dbOver: {},     // правки базовых продуктов: { "Имя из базы": {kcal,p,f,c} }
   dbCustom: [],   // свои продукты: [{name,kcal,p,f,c}]
   dbHidden: [],   // скрытые (удалённые) базовые продукты: [имя]
+  showFast: true,  // индикатор православных постов в дневнике
 };
 
 // базовые продукты с правками пользователя + его собственные
@@ -362,6 +363,7 @@ function fastStatus(date) {
 function renderFastBanner() {
   const b = el('#fastBanner');
   if (!b) return;
+  if (state.settings.showFast === false) { b.hidden = true; return; }
   const st = fastStatus(fromISO(viewDate));
   b.hidden = false;
   b.className = 'card fast-banner ' + st.level;
@@ -819,6 +821,7 @@ function renderSettings() {
   el('#inAim').value = s.profile.aim;
   el('#inKcalGoal').value = s.calorieGoal;
   el('#inWaterGoal').value = s.waterGoal;
+  el('#inFastBanner').checked = s.showFast !== false;
 }
 
 function readProfile() {
@@ -1129,6 +1132,10 @@ function init() {
     }
   });
 
+  el('#inFastBanner').addEventListener('change', () => {
+    state.settings.showFast = el('#inFastBanner').checked;
+    saveState(); renderDiary();
+  });
   el('#inWaterGoal').addEventListener('change', () => {
     const v = +el('#inWaterGoal').value;
     if (v >= 500 && v <= 8000) {
