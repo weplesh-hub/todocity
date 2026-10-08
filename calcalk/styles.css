@@ -641,7 +641,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.entry-kcal::after { content: ''; }
+.entry-kcal::after { content: ' ккал'; font-size: 9.5px; font-weight: 600; opacity: 0.7; }
 
 .del {
   width: 26px;
