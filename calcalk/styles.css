@@ -948,7 +948,7 @@ body:has(.qd-overlay) { overflow: hidden; }
   font-size: 13px;
   line-height: 1.35;
 }
-.fast-banner .fb-ic { margin: 0; width: 18px; height: 18px; opacity: 1; flex-shrink: 0; }
+.fast-banner .fb-ic { margin: 0; width: 21px; height: 21px; opacity: 1; flex-shrink: 0; }
 .fast-banner b { font-weight: 700; }
 .fast-banner.fast { color: #b5484d; }
 .fast-banner.nomeat { color: #a8752f; }

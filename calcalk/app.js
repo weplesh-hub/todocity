@@ -356,7 +356,7 @@ function fastStatus(date) {
   if (md === 118) return { level: 'fast', title: 'Крещенский сочельник' };
   if (md === 911) return { level: 'fast', title: 'Усекновение главы Иоанна Предтечи' };
   if (md === 927) return { level: 'fast', title: 'Воздвижение Креста Господня' };
-  if (dow === 3 || dow === 5) return { level: 'fast', title: dow === 3 ? 'Постная среда' : 'Постная пятница' };
+  if (dow === 3 || dow === 5) return { level: 'fast', title: dow === 3 ? 'среда' : 'пятница' };
   return { level: 'none', title: '' };
 }
 function renderFastBanner() {
@@ -365,11 +365,10 @@ function renderFastBanner() {
   const st = fastStatus(fromISO(viewDate));
   b.hidden = false;
   b.className = 'card fast-banner ' + st.level;
-  const hint = st.level === 'fast' ? 'мясо и алкоголь — нельзя' :
-               st.level === 'nomeat' ? 'мясо — нельзя, алкоголь — можно' :
-               'мясо и алкоголь — можно';
-  b.innerHTML = '<span class="ic fb-ic">' + (st.level === 'none' ? ICONS.check : ICONS.cross) + '</span>' +
-    '<div class="fb-text">' + (st.title ? '<b>' + st.title + '</b> · ' : '') + hint + '</div>';
+  const label = st.level === 'fast' ? 'ПОСТ ЕСТЬ' :
+                st.level === 'nomeat' ? 'БЕЗ МЯСА' : 'НЕТ ПОСТА';
+  b.innerHTML = '<span class="ic fb-ic">' + (st.level === 'none' ? ICONS.utensils : ICONS.cross) + '</span>' +
+    '<div class="fb-text"><b>' + label + '</b>' + (st.title ? ' · ' + st.title : '') + '</div>';
 }
 
 function renderDiary() {
