@@ -1005,6 +1005,15 @@ function init() {
     const hasG = isFinite(g) && g > 0;
     const k = hasG ? g / 100 : 1; // без веса — считаем, что введено итоговое значение на порцию
     const p100 = num(el('#foodP')), f100 = num(el('#foodF')), c100 = num(el('#foodC'));
+    // новый продукт — автоматически сохраняем в базу «Продукты» (значения на 100 г)
+    const inBase = getFoodDB().some((f) => f.name.toLowerCase() === name.toLowerCase());
+    if (!inBase) {
+      state.settings.dbCustom.push({
+        name: name,
+        kcal: Math.round(kcal100),
+        p: +(p100 || 0).toFixed(1), f: +(f100 || 0).toFixed(1), c: +(c100 || 0).toFixed(1),
+      });
+    }
     const totalKcal = Math.round(kcal100 * k * 10) / 10;
     day(viewDate, true).foods.push({
       id: uid(),
@@ -1016,7 +1025,7 @@ function init() {
     });
     saveState();
     renderDiary();
-    toast('Добавлено: ' + name + (hasG ? ' · ' + Math.round(g) + ' г' : '') + ' · ' + Math.round(totalKcal) + ' ккал');
+    toast('Добавлено: ' + name + (hasG ? ' · ' + Math.round(g) + ' г' : '') + ' · ' + Math.round(totalKcal) + ' ккал' + (!inBase ? ' · сохранён в базе' : ''));
     ['foodName', 'foodGrams', 'foodKcal', 'foodP', 'foodF', 'foodC'].forEach((id) => { el('#' + id).value = ''; });
     activeFood = null;
     closeSuggest();
