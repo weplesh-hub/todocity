@@ -117,6 +117,7 @@ const ICONS = {
   sliders: mealSvg('<path d="M3 5.2h7.3M12.7 5.2h.3M3 11h.3M7.7 11h5.3"/><circle cx="11.5" cy="5.2" r="1.7"/><circle cx="6.2" cy="11" r="1.7"/>'),
   search: mealSvg('<circle cx="7" cy="7" r="4.2"/><path d="M10.3 10.3 13.4 13.4"/>'),
   cross: mealSvg('<path d="M8 1.8v12.4"/><path d="M5.3 4.4h5.4"/><path d="M3 7.3h10"/><path d="M6.1 10.5l3.8 2.4"/>'),
+  bottle: mealSvg('<path d="M6.6 2h2.8"/><path d="M6.6 2v2.6c0 .8-.3 1.2-.8 1.8-.6.8-.9 1.5-.9 2.5v2.4c0 1.3 1 2.3 2.3 2.3h1.6c1.3 0 2.3-1 2.3-2.3V8.9c0-1-.3-1.7-.9-2.5-.5-.6-.8-1-.8-1.8V2"/>'),
   check: mealSvg('<path d="M3.2 8.5l3.3 3.4 6.3-7.8"/>'),
   utensils: mealSvg('<path d="M3.1 2.4v3.9c0 1.2 1 2.2 2.2 2.2h.6c1.2 0 2.2-1 2.2-2.2V2.4"/><path d="M5.6 2.4v11.4"/><path d="M10.3 9.9V2.6c1.9.9 3.1 2.8 3.1 5.1v2.2h-3.1z"/><path d="M11.85 9.9v3.9"/>'),
 };
@@ -369,7 +370,7 @@ function renderFastBanner() {
   b.className = 'card fast-banner ' + st.level;
   const label = st.level === 'fast' ? 'ПОСТ ЕСТЬ' :
                 st.level === 'nomeat' ? 'БЕЗ МЯСА' : 'НЕТ ПОСТА';
-  b.innerHTML = '<span class="ic fb-ic">' + (st.level === 'none' ? ICONS.utensils : ICONS.cross) + '</span>' +
+  b.innerHTML = '<span class="ic fb-ic">' + (st.level === 'none' ? ICONS.bottle : ICONS.cross) + '</span>' +
     '<div class="fb-text"><b>' + label + '</b>' + (st.title ? ' · ' + st.title : '') + '</div>';
 }
 
