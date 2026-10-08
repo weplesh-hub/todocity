@@ -1014,6 +1014,16 @@ function init() {
   });
 
   // Вода
+  // вода в кнопках быстрых объёмов: уровень пропорционален значению, волнистая поверхность
+  document.querySelectorAll('.water-quick').forEach((b) => {
+    const lvl = +b.dataset.ml >= 500 ? 64 : +b.dataset.ml >= 330 ? 46 : 30;
+    const w = document.createElement('span');
+    w.className = 'wq-water';
+    w.style.setProperty('--lvl', lvl + '%');
+    w.innerHTML = '<svg class="wq-wave" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="M0 8 V4 Q7.5 0 15 4 T30 4 T45 4 T60 4 T75 4 T90 4 T105 4 T120 4 V8 Z"/></svg>';
+    b.appendChild(w);
+  });
   document.querySelectorAll('.water-quick').forEach((b) =>
     b.addEventListener('click', () => addWater(+b.dataset.ml)));
   el('#waterForm').addEventListener('submit', (e) => {

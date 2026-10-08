@@ -986,3 +986,26 @@ body:has(.qd-overlay) { overflow: hidden; }
   accent-color: var(--water);
   cursor: pointer;
 }
+
+/* ---------- Вода в кнопках быстрых объёмов ---------- */
+.water-quick { position: relative; overflow: hidden; }
+.wq-water {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--lvl, 40%);
+  background: rgba(59, 158, 255, .22);
+  pointer-events: none;
+}
+.wq-wave {
+  position: absolute;
+  top: -7px; left: 0;
+  width: 200%;
+  height: 8px;
+  display: block;
+  animation: wqFlow 4s linear infinite;
+}
+.wq-wave path { fill: rgba(59, 158, 255, .22); }
+@keyframes wqFlow { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+[data-theme="dark"] .wq-water { background: rgba(84, 173, 255, .18); }
+[data-theme="dark"] .wq-wave path { fill: rgba(84, 173, 255, .18); }
+@media (prefers-reduced-motion: reduce) { .wq-wave { animation: none; } }
