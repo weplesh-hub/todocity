@@ -27,7 +27,7 @@ index.html + styles.css + app.js, localStorage `calcalk_v1`)**. Иконки в 
 1. **Версионирование ресурсов.** При ЛЮБОЙ правке `style.css` или `main.js` поднять версию
    в ссылках `index.html`: `style.css?v=N`, `main.js?v=N`. Иначе браузер (в т.ч. встроенный
    IAB) отдаёт кешированную старую версию. Текущие версии (сверено 07.10.2026): **style.css?v=43,
-   main.js?v=45**; calcalk: styles.css?v=52, app.js?v=26.
+   main.js?v=45**; calcalk: styles.css?v=53, app.js?v=26.
 2. **Формат дат.** Хранить даты только как локальную полночь: хелпер `localMidnightISO(d)`.
    Никогда не использовать `toISOString().split('T')[0]` — это UTC, даёт смещение на день
    в таймзонах восточнее UTC. Для полей `<input type="date">` — хелпер `toLocalISODate(d)`.

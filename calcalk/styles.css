@@ -614,7 +614,7 @@ input::placeholder { color: var(--muted); opacity: .7; }
 
 .meal:first-child .meal-head { margin-top: 6px; }
 
-.meal-ico { width: 16px; height: 16px; display: flex; align-items: center; color: var(--muted); }
+.meal-ico { width: 16px; height: 16px; display: flex; align-items: center; color: var(--muted); margin-left: 4px; }
 .meal-ico svg { width: 100%; height: 100%; }
 .meal-sub {
   text-align: right;
