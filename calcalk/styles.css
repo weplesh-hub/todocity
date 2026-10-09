@@ -890,7 +890,7 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 #addFoodBtn.ready:hover { border: none; }
 
 /* Ряд кнопок формы: «Добавить в дневник» растягивается, «Отмена» появляется при заполненной форме */
-.food-submit-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.food-submit-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 10px; }
 .food-submit-row #addFoodBtn { flex: 1 1 190px; width: auto; }
 #cancelFoodBtn[hidden] { display: none; }
 #cancelFoodBtn { flex: 0 0 auto; color: var(--muted); }
