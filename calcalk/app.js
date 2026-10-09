@@ -476,7 +476,7 @@ function renderMeals() {
         '<span class="meal-spacer"></span>' +
       '</div>' +
       items.map((f) =>
-        '<div class="entry">' +
+        '<div class="entry" data-eid="' + f.id + '" title="Изменить количество">' +
         '<span class="entry-time">' + escapeHtml(f.time || '') + '</span>' +
         '<span class="entry-name">' + escapeHtml(f.name) + (f.g ? ' <small>' + f.g + ' г</small>' : '') + '</span>' +
         '<span class="entry-kcal">' + Math.round(f.kcal) + '</span>' +
@@ -637,6 +637,75 @@ function quickGramsDialog(i) {
     const act = e.target.closest('[data-act]');
     if (!act) return;
     if (act.dataset.act === 'add') add();
+    else ov.remove();
+  });
+}
+
+// Редактирование записи дневника: меняем количество (граммы или ккал порции)
+function entryEditDialog(id) {
+  const d = day(viewDate);
+  const f = (d.foods || []).find((x) => x.id === id);
+  if (!f) return;
+  const hasG = f.g && f.g > 0;
+  const per = (v) => hasG ? (v / f.g * 100) : v;
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const step = hasG ? 10 : 50;
+  const ov = qdOverlay(
+    '<div class="qd-head">' +
+      '<span class="qd-plate">' + icoWrap('utensils') + '</span>' +
+      '<div class="qd-head-text">' +
+        '<div class="qd-name">' + escapeHtml(f.name) + '</div>' +
+        '<div class="qd-macros">' + r1(per(f.kcal)) + (hasG ? ' ккал / 100 г' : ' ккал в порции') +
+          ' · Б ' + r1(per(f.p)) + ' · Ж ' + r1(per(f.f)) + ' · У ' + r1(per(f.c)) + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="qd-sec">' + (hasG ? 'Вес, г' : 'Ккал в порции') + '</div>' +
+    '<div class="qd-weight">' +
+      '<button type="button" class="qd-step" data-step="-' + step + '" aria-label="Меньше">−</button>' +
+      '<input id="edVal" type="number" min="1" step="1" value="' + (hasG ? f.g : Math.round(f.kcal)) + '" inputmode="numeric">' +
+      '<button type="button" class="qd-step" data-step="' + step + '" aria-label="Больше">+</button>' +
+    '</div>' +
+    (hasG ? '<div class="qd-quick-g">' + ['50', '100', '150', '200', '250'].map((g) => '<button type="button" data-g="' + g + '">' + g + '</button>').join('') + '</div>' : '') +
+    '<button class="btn primary qd-add" data-act="save">Сохранить</button>' +
+    '<button type="button" class="qd-cancel" data-act="cancel">Отмена</button>');
+  const input = ov.querySelector('#edVal');
+  ov.querySelectorAll('.qd-step').forEach((b) => b.addEventListener('click', () => {
+    const v = Math.max(1, Math.round((+input.value || 0) + (+b.dataset.step)));
+    input.value = v; input.focus();
+  }));
+  ov.querySelectorAll('.qd-quick-g button').forEach((b) => b.addEventListener('click', () => {
+    input.value = b.dataset.g; input.focus();
+  }));
+  input.focus(); input.select();
+  const save = () => {
+    const v = Math.round(+input.value);
+    if (!v || v <= 0) { input.focus(); return; }
+    if (hasG) {
+      const k = v / 100;
+      f.kcal = Math.round(f.kcal / f.g * 100 * k * 10) / 10;
+      f.p = +(f.p / f.g * 100 * k).toFixed(1);
+      f.f = +(f.f / f.g * 100 * k).toFixed(1);
+      f.c = +(f.c / f.g * 100 * k).toFixed(1);
+      f.g = v;
+    } else {
+      const kk = f.kcal ? v / f.kcal : 1;
+      f.kcal = v;
+      f.p = +((f.p || 0) * kk).toFixed(1);
+      f.f = +((f.f || 0) * kk).toFixed(1);
+      f.c = +((f.c || 0) * kk).toFixed(1);
+    }
+    saveState(); renderDiary(); ov.remove();
+    toast('Обновлено: ' + f.name + (hasG ? ' · ' + v + ' г' : '') + ' · ' + Math.round(f.kcal) + ' ккал');
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
+  });
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov) { ov.remove(); return; }
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'save') save();
     else ov.remove();
   });
 }
@@ -1048,6 +1117,11 @@ function init() {
 
   // Подсказки по базе
   el('#foodName').addEventListener('input', () => { activeFood = null; renderSuggest(); });
+  el('#mealList').addEventListener('click', (e) => {
+    if (e.target.closest('.del')) return;
+    const row = e.target.closest('.entry[data-eid]');
+    if (row) entryEditDialog(row.dataset.eid);
+  });
   el('#foodForm').addEventListener('input', updateAddBtn);
   el('#cancelFoodBtn').addEventListener('click', cancelFoodForm);
   updateAddBtn();

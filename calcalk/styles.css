@@ -624,9 +624,13 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .meal-spacer { width: 28px; }
 
 .entry {
-  padding: 7px 0;
+  padding: 7px 4px;
+  margin: 0 -4px;
   border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: 8px;
 }
+.entry:hover { background: var(--bg-inset); }
 
 .meal .entry:last-child { border-bottom: none; }
 
