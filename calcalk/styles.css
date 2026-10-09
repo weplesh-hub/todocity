@@ -1006,7 +1006,7 @@ body:has(.qd-overlay) { overflow: hidden; }
   animation: wqFlow 4s linear infinite;
 }
 .wq-wave path { fill: rgba(59, 158, 255, .22); }
-.wq-crest { stroke: rgba(59, 158, 255, .7); stroke-width: 1.2; }
+.wq-crest { stroke: rgba(59, 158, 255, .55); stroke-width: 1.2; }
 .wq-body { position: absolute; left: 0; right: 0; top: 8px; bottom: 0; background: rgba(59, 158, 255, .22); }
 @keyframes wqFlow { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 [data-theme="dark"] .wq-wave path { fill: rgba(84, 173, 255, .18); }
