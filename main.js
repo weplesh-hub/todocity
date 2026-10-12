@@ -1465,7 +1465,7 @@ function closeSettings() { document.getElementById('settingsModal').style.displa
 
 // ===== ОТПРАВКА СПИСКА НА E-MAIL =====
 // Логотип для письма — абсолютный URL (в письме относительные пути не работают)
-const EMAIL_LOGO_URL = 'http://104.171.138.209/logo-todocity-email.png';
+const EMAIL_LOGO_URL = 'http://104.171.138.209/logo-todocity-email.png?v=2';
 const IMP_COLOR = { high: '#fb7185', medium: '#fbbf24', low: '#4ade80' };
 const IMP_MARK = { high: '▲', medium: '●', low: '▽' };
 let shareHtmlCache = '';
