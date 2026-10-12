@@ -1353,6 +1353,8 @@ function taskHTML(t) {
           <button class="icon-btn ${isDeal ? 'active' : ''}" data-action="set-deal" data-id="${t.id}" title="${isDeal ? 'Снять дело дня' : 'Сделать делом дня'}"><i class="fa-regular fa-star"></i></button>
           <button class="icon-btn" data-action="change-date" data-id="${t.id}" title="Изменить дату"><i class="fa-regular fa-calendar-plus"></i></button>
           <button class="icon-btn" data-action="show-add-subtask" data-id="${t.id}" title="Добавить подзадачу"><i class="fa-regular fa-square-plus"></i></button>
+          ${t.subtasks && t.subtasks.length ? `<button class="icon-btn" data-action="share-task" data-id="${t.id}" title="Отправить на почту списком"><i class="fa-regular fa-envelope"></i></button>
+          <button class="icon-btn" data-action="export-task" data-id="${t.id}" title="Экспорт списком"><i class="fa-regular fa-file-arrow-down"></i></button>` : ''}
           <button class="icon-btn danger" data-action="delete-task" data-id="${t.id}" title="Удалить"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
@@ -1561,6 +1563,75 @@ function buildShareHtml() {
     </div>
   </div>`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body style="margin:0;padding:0;">${inner}</body></html>`;
+}
+
+// ===== ОТПРАВКА/ЭКСПОРТ ОДНОЙ ЗАДАЧИ С ПОДЗАДАЧАМИ =====
+// HTML-карточка с интерактивными чекбоксами: при вставке в Gmail/Outlook
+// чекбоксы остаются живыми — получатель может отмечать выполненное
+function taskChecklistHtml(t) {
+  const isDeal = t.id === state.dealOfDayId;
+  const cb = (done) => `<input type="checkbox" ${done ? 'checked' : ''} style="margin:0;transform:scale(1.2);cursor:pointer;vertical-align:-2px;">`;
+  const subs = t.subtasks.map(s => `
+    <div style="margin:5px 0 0 28px;font-size:13px;line-height:1.5;color:${s.done ? '#6f7872' : '#c7c0b3'};">
+      ${cb(s.done)}&nbsp; <span style="${s.done ? 'text-decoration:line-through;' : ''}">${escapeHtml(s.text)}</span>
+    </div>`).join('');
+  const doneN = t.subtasks.filter(x => x.done).length;
+  return `
+  <div style="background:#0a0e0c;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:560px;margin:0 auto;background:#131816;border:1px solid #232a27;border-radius:16px;overflow:hidden;">
+      <div style="padding:26px 28px 18px;background:#0a0e0c;">
+        <img src="${EMAIL_LOGO_URL}" width="246" alt="TODOCITY" style="display:block;border:0;">
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #232a27;font-size:13px;color:#c7c0b3;">
+          <span style="color:#ff6b4a;font-weight:bold;">Список дел</span> &nbsp;·&nbsp; ${toLocalISODate(new Date()).split('-').reverse().join('.')} &nbsp;·&nbsp;
+          <span style="color:#4ade80;font-weight:bold;">${doneN}</span><span style="color:#6f7872;"> / ${t.subtasks.length} выполнено</span>
+        </div>
+      </div>
+      <div style="padding:14px 20px 8px;">
+        <div style="padding:13px 16px;background:${isDeal ? '#241710' : '#191e1c'};border-radius:10px;${isDeal ? 'border-left:3px solid #ff6b4a;' : ''}">
+          <div style="font-size:16px;line-height:1.45;color:${t.done ? '#6f7872' : '#f5f1e8'};${t.done ? 'text-decoration:line-through;' : ''}">
+            ${cb(t.done)}&nbsp; <span style="font-weight:bold;">${isDeal ? '<span style="color:#ff6b4a;">★ </span>' : ''}${escapeHtml(t.text)}</span>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #2a322e;">${subs}</div>
+        </div>
+      </div>
+      <div style="padding:16px 28px;background:#0a0e0c;border-top:1px solid #232a27;font-size:11px;color:#6f7872;">
+        Отправлено из TODOCITY — планировщика дел · <a href="http://104.171.138.209" style="color:#ff6b4a;text-decoration:none;">todocity</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openTaskShareModal(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t || !t.subtasks || !t.subtasks.length) { toast('У задачи нет подзадач', 'danger'); return; }
+  const lines = ['✦ TODOCITY — список дел', t.text, ''];
+  t.subtasks.forEach(sub => lines.push(`   [${sub.done ? 'x' : ' '}] ${sub.text}`));
+  lines.push('', `Выполнено: ${t.subtasks.filter(x => x.done).length} из ${t.subtasks.length}`);
+  document.getElementById('shareSubjectInput').value = ('TODOCITY: ' + t.text).slice(0, 120);
+  document.getElementById('shareBodyInput').value = lines.join('\n');
+  shareHtmlCache = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(t.text)}</title></head><body style="margin:0;padding:0;">${taskChecklistHtml(t)}</body></html>`;
+  const prev = document.getElementById('sharePreview');
+  if (prev) prev.innerHTML = taskChecklistHtml(t);
+  document.getElementById('shareEmailInput').value = state.shareEmail || '';
+  document.getElementById('shareModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('shareEmailInput')?.focus(), 50);
+}
+
+function exportTaskList(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t || !t.subtasks || !t.subtasks.length) { toast('У задачи нет подзадач', 'danger'); return; }
+  const lines = [`# ${t.text}`, ''];
+  t.subtasks.forEach(sub => lines.push(`- [${sub.done ? 'x' : ' '}] ${sub.text}`));
+  lines.push('', `Выполнено: ${t.subtasks.filter(x => x.done).length} из ${t.subtasks.length}`, '', 'Отправлено из TODOCITY');
+  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'todocity-' + t.text.trim().toLowerCase().replace(/[^\wа-яё]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 40) + '.md';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('Список сохранён в файл', 'success');
 }
 
 function openShareModal() {
@@ -2876,6 +2947,8 @@ document.addEventListener('click', (e) => {
     case 'edit-subtask': showEditSubtaskUI(action.dataset.task, action.dataset.sub); break;
     case 'show-add-subtask': showAddSubtaskUI(id); break;
     case 'change-date': toggleDatePick(id); break;
+    case 'share-task': openTaskShareModal(id); break;
+    case 'export-task': exportTaskList(id); break;
     case 'add-folder': addFolder(); break;
     case 'toggle-folder': toggleFolder(id); break;
     case 'rename-folder': startRenameFolder(id); break;
