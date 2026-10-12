@@ -1620,18 +1620,21 @@ function openTaskShareModal(id) {
 function exportTaskList(id) {
   const t = state.tasks.find(x => x.id === id);
   if (!t || !t.subtasks || !t.subtasks.length) { toast('У задачи нет подзадач', 'danger'); return; }
-  const lines = [`# ${t.text}`, ''];
-  t.subtasks.forEach(sub => lines.push(`- [${sub.done ? 'x' : ' '}] ${sub.text}`));
-  lines.push('', `Выполнено: ${t.subtasks.filter(x => x.done).length} из ${t.subtasks.length}`, '', 'Отправлено из TODOCITY');
-  const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  // HTML-файл: двойной клик — открывается в браузере как фирменный чек-лист,
+  // чекбоксы интерактивны прямо в файле, никакого софта не нужно
+  const html = '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + escapeHtml('TODOCITY: ' + t.text) + '</title></head>' +
+    '<body style="margin:0;padding:0;">' + taskChecklistHtml(t) + '</body></html>';
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'todocity-' + t.text.trim().toLowerCase().replace(/[^\wа-яё]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 40) + '.md';
+  a.download = 'todocity-' + t.text.trim().toLowerCase().replace(/[^\wа-яё]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 40) + '.html';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  toast('Список сохранён в файл', 'success');
+  toast('Список сохранён — откроется в браузере', 'success');
 }
 
 function openShareModal() {
