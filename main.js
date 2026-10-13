@@ -1354,7 +1354,7 @@ function taskHTML(t) {
           <button class="icon-btn" data-action="change-date" data-id="${t.id}" title="Изменить дату"><i class="fa-regular fa-calendar-plus"></i></button>
           <button class="icon-btn" data-action="show-add-subtask" data-id="${t.id}" title="Добавить подзадачу"><i class="fa-regular fa-square-plus"></i></button>
           ${t.subtasks && t.subtasks.length ? `<button class="icon-btn" data-action="share-task" data-id="${t.id}" title="Отправить на почту списком"><i class="fa-regular fa-envelope"></i></button>
-          <button class="icon-btn" data-action="export-task" data-id="${t.id}" title="Экспорт списком"><i class="fa-regular fa-file-arrow-down"></i></button>` : ''}
+          <button class="icon-btn" data-action="export-task" data-id="${t.id}" title="Экспорт списком"><i class="fa-regular fa-download"></i></button>` : ''}
           <button class="icon-btn danger" data-action="delete-task" data-id="${t.id}" title="Удалить"><i class="fa-regular fa-trash-can"></i></button>
         </div>
       </div>
