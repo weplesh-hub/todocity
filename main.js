@@ -2177,7 +2177,8 @@ function renderDatePick() {
       <button class="date-quick-btn" data-action="dp-quick" data-id="${task.id}" data-off="2">Послезавтра</button>
       <button class="date-quick-btn" data-action="dp-quick" data-id="${task.id}" data-off="monday">Следующий понедельник</button>
     </div>
-    ${cal}`;
+    ${cal}
+    <button class="date-quick-btn dp-clear-btn" data-action="dp-clear" data-id="${task.id}"><i class="fa-regular fa-calendar-xmark"></i>Очистить дату</button>`;
 
   // позиционируем у кнопки изменения даты, не выходя за экран
   const btn = document.querySelector(`.task[data-id="${task.id}"] [data-action="change-date"]`);
@@ -2262,11 +2263,17 @@ function showEditTaskUI(taskId) {
       <div class="edit-row">
 <div class="edit-field">
   <div class="edit-field-label">Дата начала работ по задаче</div>
-  <input type="date" class="edit-input" id="editDueDateInput" value="${editState.dueDate ? toLocalISODate(new Date(editState.dueDate)) : ''}">
+  <div class="time-input-wrap">
+    <input type="date" class="edit-input" id="editDueDateInput" value="${editState.dueDate ? toLocalISODate(new Date(editState.dueDate)) : ''}">
+    <button type="button" class="time-clear-btn" data-clear="editDueDateInput" aria-label="Очистить дату" title="Очистить дату"><i class="fa-solid fa-xmark"></i></button>
+  </div>
 </div>
 <div class="edit-field">
   <div class="edit-field-label">Дата завершения работ по задаче</div>
-  <input type="date" class="edit-input" id="editEndDateInput" value="${editState.endDate ? toLocalISODate(new Date(editState.endDate)) : ''}">
+  <div class="time-input-wrap">
+    <input type="date" class="edit-input" id="editEndDateInput" value="${editState.endDate ? toLocalISODate(new Date(editState.endDate)) : ''}">
+    <button type="button" class="time-clear-btn" data-clear="editEndDateInput" aria-label="Очистить дату завершения" title="Очистить дату"><i class="fa-solid fa-xmark"></i></button>
+  </div>
 </div>
 <div class="edit-field">
   <div class="edit-field-label">Время начала</div>
@@ -2461,6 +2468,7 @@ function showEditTaskUI(taskId) {
     // Шкала прогресса — только у дел с повтором; сняли повтор → шкала выключается
     t.progressEnabled = !!(editState.repeat && editState.progressEnabled);
     t.progressStep = [1, 5, 10, 25].includes(editState.progressStep) ? editState.progressStep : 5;
+    if (!t.dueDate && state.dealOfDayId === t.id) state.dealOfDayId = null; // дело дня без даты не бывает
     render(); toast('Изменения сохранены', 'success');
   };
   const cancel = () => render();
@@ -2967,6 +2975,16 @@ document.addEventListener('click', (e) => {
     }
     case 'dp-day': {
       setTaskDate(id, new Date(datePick.year, datePick.month, parseInt(action.dataset.day, 10)));
+      break;
+    }
+    case 'dp-clear': {
+      const t = state.tasks.find(x => x.id === id);
+      if (t) {
+        t.dueDate = null;
+        if (state.dealOfDayId === t.id) state.dealOfDayId = null; // дело дня без даты не бывает
+        closeDatePick(); saveState(); render();
+        toast('Дата удалена', 'success');
+      }
       break;
     }
     case 'dp-prev': datePick.month--; if (datePick.month < 0) { datePick.month = 11; datePick.year--; } renderDatePick(); break;
@@ -3479,10 +3497,10 @@ document.getElementById('taskTimerSelect').addEventListener('change', (e) => {
   state.formTimerDuration = parseInt(e.target.value);
 });
 
-// Быстрая очистка полей времени (крестик у поля): общая для формы и редактора задачи
+// Быстрая очистка полей времени и дат (крестик у поля): общая для формы и редактора задачи
 function wireTimeClear(scope) {
   (scope || document).querySelectorAll('.time-input-wrap').forEach(wrap => {
-    const input = wrap.querySelector('input[type="time"]');
+    const input = wrap.querySelector('input[type="time"], input[type="date"]');
     const btn = wrap.querySelector('.time-clear-btn');
     if (!input || !btn) return;
     const sync = () => wrap.classList.toggle('has-value', !!input.value);
