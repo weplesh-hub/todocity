@@ -1007,6 +1007,7 @@ h2 .ic, h3 .ic { opacity: 0.7; }
 .qd-step:hover { border-color: var(--muted); }
 .qd-step:active { transform: scale(.96); }
 .qd-quick-g { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+.qd-name-input { width: 100%; font-size: 15px; font-weight: 600; padding: 10px 12px; }
 .qd-quick-g button {
   padding: 7px 0; border-radius: 9px;
   border: 1px solid var(--border); background: var(--card); color: var(--muted);

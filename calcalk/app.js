@@ -741,7 +741,7 @@ function entryEditDialog(id) {
   });
 }
 
-// Редактирование активности: меняем число сожжённых калорий
+// Редактирование активности: название и число сожжённых калорий
 function actEditDialog(id) {
   const d = day(viewDate);
   const a = ((d && d.acts) || []).find((x) => x.id === id);
@@ -754,7 +754,9 @@ function actEditDialog(id) {
         '<div class="qd-macros">активные калории добавляются к норме дня</div>' +
       '</div>' +
     '</div>' +
-    '<div class="qd-sec">Сожжено, ккал</div>' +
+    '<div class="qd-sec">Вид активности</div>' +
+    '<input id="edActName" class="qd-name-input" type="text" maxlength="40" value="' + escapeHtml(a.name) + '" placeholder="Бег, зал, велосипед…">' +
+    '<div class="qd-sec" style="margin-top:10px">Сожжено, ккал</div>' +
     '<div class="qd-weight">' +
       '<button type="button" class="qd-step" data-step="-50" aria-label="Меньше">−</button>' +
       '<input id="edAct" type="number" min="1" max="5000" step="1" value="' + Math.round(a.kcal) + '" inputmode="numeric">' +
@@ -763,6 +765,7 @@ function actEditDialog(id) {
     '<div class="qd-quick-g">' + ['100', '150', '200', '300', '400', '500'].map((k) => '<button type="button" data-g="' + k + '">' + k + '</button>').join('') + '</div>' +
     '<button class="btn primary qd-add" data-act="save">Сохранить</button>' +
     '<button type="button" class="qd-cancel" data-act="cancel">Отмена</button>');
+  const nameInput = ov.querySelector('#edActName');
   const input = ov.querySelector('#edAct');
   ov.querySelectorAll('.qd-step').forEach((b) => b.addEventListener('click', () => {
     const v = Math.max(1, Math.min(5000, Math.round((+input.value || 0) + (+b.dataset.step))));
@@ -771,18 +774,21 @@ function actEditDialog(id) {
   ov.querySelectorAll('.qd-quick-g button').forEach((b) => b.addEventListener('click', () => {
     input.value = b.dataset.g; input.focus();
   }));
-  input.focus(); input.select();
+  nameInput.focus(); nameInput.select();
   const save = () => {
+    const nm = nameInput.value.trim();
+    if (!nm) { toast('Укажите вид активности'); nameInput.focus(); return; }
     const v = Math.round(+input.value);
-    if (!v || v <= 0 || v > 5000) { input.focus(); return; }
+    if (!v || v <= 0 || v > 5000) { toast('Укажите калории от 1 до 5000'); input.focus(); return; }
+    a.name = nm;
     a.kcal = v;
     saveState(); renderDiary(); ov.remove();
-    toast('Обновлено: ' + a.name + ' · ' + v + ' ккал');
+    toast('Обновлено: ' + nm + ' · ' + v + ' ккал');
   };
-  input.addEventListener('keydown', (e) => {
+  [nameInput, input].forEach((inp) => inp.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); save(); }
     if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
-  });
+  }));
   ov.addEventListener('click', (e) => {
     if (e.target === ov) { ov.remove(); return; }
     const act = e.target.closest('[data-act]');
