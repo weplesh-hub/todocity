@@ -20,7 +20,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=55">
+<link rel="stylesheet" href="styles.css?v=56">
 </head>
 <body>
 
@@ -137,6 +137,21 @@
 
       <div id="mealList"></div>
     </div>
+
+    <div class="card section">
+      <div class="section-head">
+        <h2><span class="ic" data-ico="dumbbell"></span>Активность</h2>
+        <span class="section-total" id="burnTotal">0 ккал</span>
+      </div>
+      <form id="actForm" class="act-form" autocomplete="off">
+        <input id="actName" placeholder="Бег, зал, велосипед…" maxlength="40">
+        <input id="actKcal" type="number" min="1" max="5000" step="1" placeholder="ккал" inputmode="numeric">
+        <button class="btn primary" type="submit">Добавить</button>
+      </form>
+      <div class="act-chips" id="actChips"></div>
+      <div class="act-log" id="actLog"></div>
+      <p class="hint">Сожжённые калории добавляются к норме дня: что потратили — можно съесть сверх цели. Клик по записи — изменить.</p>
+    </div>
   </section>
 
   <!-- ================= ИСТОРИЯ ================= -->
@@ -205,7 +220,6 @@
     </div>
 
     <div class="card">
-    <div class="card">
       <h3 class="card-title"><span class="ic" data-ico="cross"></span>Индикатор поста</h3>
       <label class="switch-row">
         <span>Показывать пост в дневнике<small>Православный календарь: можно ли сегодня мясо и алкоголь</small></span>
@@ -228,6 +242,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=26"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>

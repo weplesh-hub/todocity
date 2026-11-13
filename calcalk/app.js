@@ -120,6 +120,7 @@ const ICONS = {
   bottle: mealSvg('<path d="M6.6 2h2.8"/><path d="M6.6 2v2.6c0 .8-.3 1.2-.8 1.8-.6.8-.9 1.5-.9 2.5v2.4c0 1.3 1 2.3 2.3 2.3h1.6c1.3 0 2.3-1 2.3-2.3V8.9c0-1-.3-1.7-.9-2.5-.5-.6-.8-1-.8-1.8V2"/>'),
   check: mealSvg('<path d="M3.2 8.5l3.3 3.4 6.3-7.8"/>'),
   utensils: mealSvg('<path d="M3.1 2.4v3.9c0 1.2 1 2.2 2.2 2.2h.6c1.2 0 2.2-1 2.2-2.2V2.4"/><path d="M5.6 2.4v11.4"/><path d="M10.3 9.9V2.6c1.9.9 3.1 2.8 3.1 5.1v2.2h-3.1z"/><path d="M11.85 9.9v3.9"/>'),
+  dumbbell: mealSvg('<path d="M6.4 8h3.2"/><path d="M4.6 5.4v5.2M11.4 5.4v5.2"/><path d="M2.8 6.4v3.2M13.2 6.4v3.2"/>'),
 };
 function icoWrap(name, cls) {
   return '<span class="ic' + (cls ? ' ' + cls : '') + '" aria-hidden="true">' + ICONS[name] + '</span>';
@@ -249,7 +250,7 @@ function saveState() {
 function day(dateISO, create) {
   if (!state.days[dateISO]) {
     if (!create) return null;
-    state.days[dateISO] = { foods: [], water: [] };
+    state.days[dateISO] = { foods: [], water: [], acts: [] };
   }
   return state.days[dateISO];
 }
@@ -279,11 +280,12 @@ function escapeHtml(s) {
 
 function dayTotals(dateISO) {
   const d = state.days[dateISO] || {};
-  const t = { kcal: 0, p: 0, f: 0, c: 0, water: 0 };
+  const t = { kcal: 0, p: 0, f: 0, c: 0, water: 0, burn: 0 };
   (d.foods || []).forEach((x) => {
     t.kcal += +x.kcal || 0; t.p += +x.p || 0; t.f += +x.f || 0; t.c += +x.c || 0;
   });
   (d.water || []).forEach((x) => { t.water += +x.ml || 0; });
+  (d.acts || []).forEach((x) => { t.burn += +x.kcal || 0; }); // активные калории
   return t;
 }
 
@@ -390,15 +392,20 @@ function renderDiary() {
   renderFastBanner();
   el('#nextDay').disabled = viewDate >= today;
 
-  // Кольцо калорий
+  // Кольцо калорий. Сожжённые активные калории добавляются к норме дня:
+  // норма = цель + активность (что сожгли — то можно съесть сверх цели)
+  const eff = goal + t.burn;
   el('#kcalNum').textContent = Math.round(t.kcal).toLocaleString('ru-RU');
-  el('#kcalCap').textContent = 'из ' + goal.toLocaleString('ru-RU') + ' ккал';
-  setRing(el('#kcalRing'), goal ? t.kcal / goal : 0);
-  el('#kcalRing').classList.toggle('over', t.kcal > goal);
-  const diff = Math.round(goal - t.kcal);
-  el('#kcalFoot').textContent = diff >= 0
+  el('#kcalCap').textContent = 'из ' + Math.round(eff).toLocaleString('ru-RU') + ' ккал';
+  setRing(el('#kcalRing'), eff ? t.kcal / eff : 0);
+  el('#kcalRing').classList.toggle('over', t.kcal > eff);
+  const diff = Math.round(eff - t.kcal);
+  el('#kcalFoot').innerHTML = diff >= 0
     ? 'осталось ' + diff.toLocaleString('ru-RU') + ' ккал'
     : 'перебор на ' + (-diff).toLocaleString('ru-RU') + ' ккал';
+  if (t.burn > 0) {
+    el('#kcalFoot').innerHTML += ' <span class="burn-note" title="Сожжённые калории добавлены к дневной норме">+' + Math.round(t.burn).toLocaleString('ru-RU') + ' активность</span>';
+  }
   el('#kcalFoot').classList.toggle('bad', diff < 0);
 
   // Кольцо воды
@@ -419,9 +426,13 @@ function renderDiary() {
   // Итоги секций
   el('#kcalTotal').textContent = Math.round(t.kcal).toLocaleString('ru-RU') + ' ккал';
   el('#waterTotal').textContent = Math.round(t.water).toLocaleString('ru-RU') + ' мл';
+  el('#burnTotal').textContent = t.burn > 0
+    ? '+' + Math.round(t.burn).toLocaleString('ru-RU') + ' ккал к норме'
+    : '0 ккал';
 
   renderWaterLog();
   renderMeals();
+  renderActs();
 }
 
 function macroRow(label, val, target, color, title) {
@@ -455,6 +466,40 @@ function renderWaterLog() {
     ).join('') + '</div>';
   }
   box.innerHTML = html;
+}
+
+/* ---------- Активность ---------- */
+
+// Недавние названия активностей (до 6, без повторов) — для чипов быстрого ввода
+function recentActNames() {
+  const names = [];
+  for (let i = 0; i < 30 && names.length < 6; i++) {
+    const d = state.days[shiftISO(viewDate, -i)];
+    ((d && d.acts) || []).forEach((a) => {
+      if (!names.includes(a.name)) names.push(a.name);
+    });
+  }
+  return names;
+}
+
+function renderActs() {
+  const list = (state.days[viewDate] || {}).acts || [];
+  el('#actChips').innerHTML = recentActNames().map((n) =>
+    '<button type="button" class="act-chip" data-name="' + escapeHtml(n) + '" title="Подставить в форму">' + escapeHtml(n) + '</button>'
+  ).join('');
+  const box = el('#actLog');
+  if (!list.length) {
+    box.innerHTML = '<span class="empty inline">Тренировки появятся здесь — сожжённые калории добавляются к дневной норме.</span>';
+    return;
+  }
+  box.innerHTML = list.map((a) =>
+    '<div class="act-row" data-aid="' + a.id + '" title="Изменить калории">' +
+      '<span class="act-time">' + escapeHtml(a.time || '') + '</span>' +
+      '<span class="act-name">' + escapeHtml(a.name) + '</span>' +
+      '<span class="act-kcal">' + Math.round(a.kcal).toLocaleString('ru-RU') + ' ккал</span>' +
+      '<button class="water-del" data-act="act" data-id="' + a.id + '" title="Удалить">×</button>' +
+    '</div>'
+  ).join('');
 }
 
 function renderMeals() {
@@ -710,6 +755,57 @@ function entryEditDialog(id) {
   });
 }
 
+// Редактирование активности: меняем число сожжённых калорий
+function actEditDialog(id) {
+  const d = day(viewDate);
+  const a = ((d && d.acts) || []).find((x) => x.id === id);
+  if (!a) return;
+  const ov = qdOverlay(
+    '<div class="qd-head">' +
+      '<span class="qd-plate">' + icoWrap('dumbbell') + '</span>' +
+      '<div class="qd-head-text">' +
+        '<div class="qd-name">' + escapeHtml(a.name) + '</div>' +
+        '<div class="qd-macros">активные калории добавляются к норме дня</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="qd-sec">Сожжено, ккал</div>' +
+    '<div class="qd-weight">' +
+      '<button type="button" class="qd-step" data-step="-50" aria-label="Меньше">−</button>' +
+      '<input id="edAct" type="number" min="1" max="5000" step="1" value="' + Math.round(a.kcal) + '" inputmode="numeric">' +
+      '<button type="button" class="qd-step" data-step="50" aria-label="Больше">+</button>' +
+    '</div>' +
+    '<div class="qd-quick-g">' + ['100', '150', '200', '300', '400', '500'].map((k) => '<button type="button" data-g="' + k + '">' + k + '</button>').join('') + '</div>' +
+    '<button class="btn primary qd-add" data-act="save">Сохранить</button>' +
+    '<button type="button" class="qd-cancel" data-act="cancel">Отмена</button>');
+  const input = ov.querySelector('#edAct');
+  ov.querySelectorAll('.qd-step').forEach((b) => b.addEventListener('click', () => {
+    const v = Math.max(1, Math.min(5000, Math.round((+input.value || 0) + (+b.dataset.step))));
+    input.value = v; input.focus();
+  }));
+  ov.querySelectorAll('.qd-quick-g button').forEach((b) => b.addEventListener('click', () => {
+    input.value = b.dataset.g; input.focus();
+  }));
+  input.focus(); input.select();
+  const save = () => {
+    const v = Math.round(+input.value);
+    if (!v || v <= 0 || v > 5000) { input.focus(); return; }
+    a.kcal = v;
+    saveState(); renderDiary(); ov.remove();
+    toast('Обновлено: ' + a.name + ' · ' + v + ' ккал');
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); ov.remove(); }
+  });
+  ov.addEventListener('click', (e) => {
+    if (e.target === ov) { ov.remove(); return; }
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'save') save();
+    else ov.remove();
+  });
+}
+
 // Пустая ячейка или ✎: задать/изменить продукт ячейки
 function quickEditDialog(i) {
   const cur = state.settings.quick[i];
@@ -843,17 +939,17 @@ function renderHistory() {
   for (let i = 0; i < 14; i++) {
     const d = shiftISO(today, -i);
     const t = dayTotals(d);
-    if (i === 0 || t.kcal > 0 || t.water > 0) rows.push({ d, t });
+    if (i === 0 || t.kcal > 0 || t.water > 0 || t.burn > 0) rows.push({ d, t });
   }
 
-  if (rows.length === 1 && rows[0].t.kcal === 0 && rows[0].t.water === 0) {
+  if (rows.length === 1 && rows[0].t.kcal === 0 && rows[0].t.water === 0 && rows[0].t.burn === 0) {
     box.innerHTML = '<div class="empty">История появится после первых записей</div>';
     return;
   }
 
   const kg = state.settings.calorieGoal;
   const wg = state.settings.waterGoal;
-  const last7 = rows.slice(0, 7).filter((r) => r.t.kcal > 0 || r.t.water > 0);
+  const last7 = rows.slice(0, 7).filter((r) => r.t.kcal > 0 || r.t.water > 0 || r.t.burn > 0);
   const kAvg = last7.length ? Math.round(last7.reduce((s, r) => s + r.t.kcal, 0) / last7.length) : 0;
   const wAvg = last7.length ? Math.round(last7.reduce((s, r) => s + r.t.water, 0) / last7.length) : 0;
 
@@ -868,8 +964,10 @@ function renderHistory() {
       '<div class="h-row' + (r.d === viewDate ? ' cur' : '') + '" data-date="' + r.d + '">' +
       '<span class="h-date">' + label(r.d) + '</span>' +
       '<div class="h-metric">' +
-        '<span class="h-num kcal' + (r.t.kcal > kg ? ' bad' : '') + '">' + Math.round(r.t.kcal).toLocaleString('ru-RU') + '</span>' +
-        '<div class="h-bar"><div class="h-fill kcal" style="width:' + Math.min(100, kg ? r.t.kcal / kg * 100 : 0).toFixed(1) + '%"></div></div>' +
+        '<span class="h-num kcal' + (r.t.kcal > kg + r.t.burn ? ' bad' : '') + '">' + Math.round(r.t.kcal).toLocaleString('ru-RU') +
+          (r.t.burn > 0 ? ' <i class="h-burn" title="Сожжено активностью — добавлено к норме">+' + Math.round(r.t.burn).toLocaleString('ru-RU') + '</i>' : '') +
+        '</span>' +
+        '<div class="h-bar"><div class="h-fill kcal" style="width:' + Math.min(100, kg + r.t.burn ? r.t.kcal / (kg + r.t.burn) * 100 : 0).toFixed(1) + '%"></div></div>' +
       '</div>' +
       '<div class="h-metric">' +
         '<span class="h-num water">' + Math.round(r.t.water).toLocaleString('ru-RU') + '</span>' +
@@ -1103,6 +1201,30 @@ function init() {
     if (v > 0) { addWater(Math.round(v)); el('#waterInput').value = ''; }
   });
 
+  // Активность: форма добавления + чипы недавних названий + клик по записи (правка калорий)
+  el('#actForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = el('#actName').value.trim();
+    const kcal = Math.round(parseFloat(el('#actKcal').value));
+    if (!name) { toast('Укажите вид активности'); el('#actName').focus(); return; }
+    if (!isFinite(kcal) || kcal <= 0 || kcal > 5000) { toast('Укажите калории от 1 до 5000'); el('#actKcal').focus(); return; }
+    day(viewDate, true).acts.push({ id: uid(), name, kcal, time: nowTime() });
+    saveState(); renderDiary();
+    el('#actKcal').value = ''; el('#actName').focus();
+    toast('+' + kcal.toLocaleString('ru-RU') + ' ккал к норме · ' + name);
+  });
+  el('#actChips').addEventListener('click', (e) => {
+    const b = e.target.closest('.act-chip');
+    if (!b) return;
+    el('#actName').value = b.dataset.name;
+    el('#actKcal').focus();
+  });
+  el('#actLog').addEventListener('click', (e) => {
+    if (e.target.closest('[data-act]')) return; // кнопка удаления — общий делегат ниже
+    const row = e.target.closest('.act-row');
+    if (row) actEditDialog(row.dataset.aid);
+  });
+
   // Быстрые продукты (20 своих ячеек): клик — добавить с весом, ✎ — изменить, пустая — заполнить
   buildChips();
   el('#quickChips').addEventListener('click', (e) => {
@@ -1184,6 +1306,7 @@ function init() {
       if (!d) return;
       if (act.dataset.act === 'food') d.foods = d.foods.filter((f) => f.id !== act.dataset.id);
       else if (act.dataset.act === 'water') d.water = d.water.filter((w) => w.id !== act.dataset.id);
+      else if (act.dataset.act === 'act') d.acts = (d.acts || []).filter((a) => a.id !== act.dataset.id);
       saveState();
       renderDiary();
       return;
