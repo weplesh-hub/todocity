@@ -136,27 +136,14 @@ const MEALS = [
     svg: mealSvg('<circle cx="8" cy="9.8" r="4.3"/><path d="M8 5.5c0-1.6 1.1-2.6 2.6-2.6"/>') },
 ];
 
-const ACTIVITY = [
-  { v: 1.2, label: 'Минимальная (сидячая работа)' },
-  { v: 1.375, label: 'Лёгкая (1–3 тренировки в неделю)' },
-  { v: 1.55, label: 'Средняя (3–5 тренировок)' },
-  { v: 1.725, label: 'Высокая (6–7 тренировок)' },
-  { v: 1.9, label: 'Очень высокая (физический труд)' },
-];
-
-const AIM = [
-  { v: 'lose', label: 'Похудение (−15%)' },
-  { v: 'keep', label: 'Поддержание веса' },
-  { v: 'gain', label: 'Набор массы (+15%)' },
-];
-
 /* ---------- Состояние и хранилище ---------- */
 
 const STORE_KEY = 'calcalk_v1';
 
 const DEFAULTS = {
-  calorieGoal: 2100,
+  calorieGoal: 2100, // запасная база нормы, если профиль не заполнен
   waterGoal: 2500,
+  deficit: 0,      // задаваемый дефицит, ккал/день (вычитается из обмен + активности)
   profile: { gender: 'male', age: 30, height: 175, weight: 75, activity: 1.375, aim: 'keep' },
   quick: Array.from({ length: 20 }, () => null), // 20 ячеек частых продуктов, КБЖУ на 100 г
   dbOver: {},     // правки базовых продуктов: { "Имя из базы": {kcal,p,f,c} }
@@ -379,7 +366,7 @@ function renderFastBanner() {
 function renderDiary() {
   const t = dayTotals(viewDate);
   const today = todayISO();
-  const goal = state.settings.calorieGoal;
+  const goal = dayGoalKcal(t.burn); // норма дня = базовый обмен + активности − дефицит
   const wgoal = state.settings.waterGoal;
 
   // Дата
@@ -392,14 +379,13 @@ function renderDiary() {
   renderFastBanner();
   el('#nextDay').disabled = viewDate >= today;
 
-  // Кольцо калорий. Сожжённые активные калории добавляются к норме дня:
-  // норма = цель + активность (что сожгли — то можно съесть сверх цели)
-  const eff = goal + t.burn;
+  // Кольцо калорий. Норма дня уже содержит активности и дефицит:
+  // базовый обмен (профиль) + сожжённое на тренировках − заданный дефицит
   el('#kcalNum').textContent = Math.round(t.kcal).toLocaleString('ru-RU');
-  el('#kcalCap').textContent = 'из ' + Math.round(eff).toLocaleString('ru-RU') + ' ккал';
-  setRing(el('#kcalRing'), eff ? t.kcal / eff : 0);
-  el('#kcalRing').classList.toggle('over', t.kcal > eff);
-  const diff = Math.round(eff - t.kcal);
+  el('#kcalCap').textContent = 'из ' + Math.round(goal).toLocaleString('ru-RU') + ' ккал';
+  setRing(el('#kcalRing'), goal ? t.kcal / goal : 0);
+  el('#kcalRing').classList.toggle('over', t.kcal > goal);
+  const diff = Math.round(goal - t.kcal);
   el('#kcalFoot').innerHTML = diff >= 0
     ? 'осталось ' + diff.toLocaleString('ru-RU') + ' ккал'
     : 'перебор на ' + (-diff).toLocaleString('ru-RU') + ' ккал';
@@ -947,7 +933,6 @@ function renderHistory() {
     return;
   }
 
-  const kg = state.settings.calorieGoal;
   const wg = state.settings.waterGoal;
   const last7 = rows.slice(0, 7).filter((r) => r.t.kcal > 0 || r.t.water > 0 || r.t.burn > 0);
   const kAvg = last7.length ? Math.round(last7.reduce((s, r) => s + r.t.kcal, 0) / last7.length) : 0;
@@ -960,21 +945,22 @@ function renderHistory() {
     '<div class="h-summary">В среднем за ' + last7.length + ' дн.: ' +
     '<b class="kcal">' + kAvg.toLocaleString('ru-RU') + ' ккал</b> · ' +
     '<b class="water">' + wAvg.toLocaleString('ru-RU') + ' мл</b> воды</div>' +
-    rows.map((r) =>
-      '<div class="h-row' + (r.d === viewDate ? ' cur' : '') + '" data-date="' + r.d + '">' +
+    rows.map((r) => {
+      const g = dayGoalKcal(r.t.burn); // норма этого дня: обмен + его активности − дефицит
+      return '<div class="h-row' + (r.d === viewDate ? ' cur' : '') + '" data-date="' + r.d + '">' +
       '<span class="h-date">' + label(r.d) + '</span>' +
       '<div class="h-metric">' +
-        '<span class="h-num kcal' + (r.t.kcal > kg + r.t.burn ? ' bad' : '') + '">' + Math.round(r.t.kcal).toLocaleString('ru-RU') +
+        '<span class="h-num kcal' + (r.t.kcal > g ? ' bad' : '') + '">' + Math.round(r.t.kcal).toLocaleString('ru-RU') +
           (r.t.burn > 0 ? ' <i class="h-burn" title="Сожжено активностью — добавлено к норме">+' + Math.round(r.t.burn).toLocaleString('ru-RU') + '</i>' : '') +
         '</span>' +
-        '<div class="h-bar"><div class="h-fill kcal" style="width:' + Math.min(100, kg + r.t.burn ? r.t.kcal / (kg + r.t.burn) * 100 : 0).toFixed(1) + '%"></div></div>' +
+        '<div class="h-bar"><div class="h-fill kcal" style="width:' + Math.min(100, g ? r.t.kcal / g * 100 : 0).toFixed(1) + '%"></div></div>' +
       '</div>' +
       '<div class="h-metric">' +
         '<span class="h-num water">' + Math.round(r.t.water).toLocaleString('ru-RU') + '</span>' +
         '<div class="h-bar"><div class="h-fill water" style="width:' + Math.min(100, wg ? r.t.water / wg * 100 : 0).toFixed(1) + '%"></div></div>' +
       '</div>' +
-      '</div>'
-    ).join('');
+      '</div>';
+    }).join('');
 }
 
 /* ---------- Настройки ---------- */
@@ -985,11 +971,20 @@ function renderSettings() {
   el('#inAge').value = s.profile.age;
   el('#inHeight').value = s.profile.height;
   el('#inWeight').value = s.profile.weight;
-  el('#inActivity').value = String(s.profile.activity);
-  el('#inAim').value = s.profile.aim;
-  el('#inKcalGoal').value = s.calorieGoal;
+  el('#inDeficit').value = s.deficit || 0;
   el('#inWaterGoal').value = s.waterGoal;
   el('#inFastBanner').checked = s.showFast !== false;
+  updateBmrView();
+}
+
+// Базовый обмен в настройках: число из профиля или подсказка заполнить профиль
+function updateBmrView() {
+  const v = el('#bmrVal');
+  if (!v) return;
+  const bmr = baseKcal();
+  v.innerHTML = bmr !== null
+    ? bmr.toLocaleString('ru-RU') + ' <small>ккал/день</small>'
+    : '<small>заполните профиль: пол, возраст, рост, вес</small>';
 }
 
 function readProfile() {
@@ -999,19 +994,24 @@ function readProfile() {
   if (!(age >= 10 && age <= 100) || !(height >= 120 && height <= 230) || !(weight >= 30 && weight <= 300)) {
     return null;
   }
-  return {
-    gender: el('#inGender').value,
-    age, height, weight,
-    activity: +el('#inActivity').value,
-    aim: el('#inAim').value,
-  };
+  return { gender: el('#inGender').value, age, height, weight };
 }
 
-function calcTargetKcal(p) {
-  // Миффлин — Сан Жеор
-  const bmr = 10 * p.weight + 6.25 * p.height - 5 * p.age + (p.gender === 'female' ? -161 : 5);
-  const aimFactor = p.aim === 'lose' ? 0.85 : p.aim === 'gain' ? 1.15 : 1;
-  return bmr * p.activity * aimFactor;
+// Базовый обмен — калории на поддержание жизнедеятельности
+// (формула Миффлина — Сан Жеора, без коэффициентов активности)
+function baseKcal() {
+  const p = state.settings.profile;
+  const w = +p.weight, h = +p.height, a = +p.age;
+  if (!(w > 0 && h > 0 && a > 0)) return null;
+  return Math.round(10 * w + 6.25 * h - 5 * a + (p.gender === 'female' ? -161 : 5));
+}
+
+// Норма дня = базовый обмен + сожжённые активности − заданный дефицит.
+// Профиль не заполнен — базой служит прежняя цель из настроек (calorieGoal).
+function dayGoalKcal(burn) {
+  const base = baseKcal();
+  const b = base !== null ? base : +state.settings.calorieGoal || 0;
+  return Math.max(0, Math.round(b + (burn || 0) - (+state.settings.deficit || 0)));
 }
 
 /* ---------- Вкладки ---------- */
@@ -1136,9 +1136,6 @@ function dbEditDialog(idx) {
 
 function init() {
   // Селекты
-  el('#inActivity').innerHTML = ACTIVITY.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
-  el('#inAim').innerHTML = AIM.map((a) => '<option value="' + a.v + '">' + a.label + '</option>').join('');
-
   // Монохромные иконки в статичной разметке: <span class="ic" data-ico="имя"></span>
   document.querySelectorAll('[data-ico]').forEach((s) => {
     if (ICONS[s.dataset.ico]) s.innerHTML = ICONS[s.dataset.ico];
@@ -1322,22 +1319,22 @@ function init() {
     activateTab('diary');
   });
 
-  // Профиль: автосохранение
-  ['inGender', 'inAge', 'inHeight', 'inWeight', 'inActivity', 'inAim'].forEach((id) =>
+  // Профиль: автосохранение (базовый обмен пересчитывается на лету)
+  ['inGender', 'inAge', 'inHeight', 'inWeight'].forEach((id) =>
     el('#' + id).addEventListener('change', () => {
       const p = readProfile();
-      if (p) { state.settings.profile = p; saveState(); }
+      if (p) { state.settings.profile = p; saveState(); updateBmrView(); }
     }));
 
-  // Цели
-  el('#inKcalGoal').addEventListener('change', () => {
-    const v = +el('#inKcalGoal').value;
-    if (v >= 500 && v <= 8000) {
-      state.settings.calorieGoal = Math.round(v);
+  // Дефицит калорий: вычитается из суммы «базовый обмен + активности»
+  el('#inDeficit').addEventListener('change', () => {
+    const v = Math.round(+el('#inDeficit').value);
+    if (isFinite(v) && v >= 0 && v <= 2000) {
+      state.settings.deficit = v;
       saveState(); renderDiary();
-      toast('Цель по калориям обновлена');
+      toast(v > 0 ? 'Дефицит ' + v.toLocaleString('ru-RU') + ' ккал учтён в норме дня' : 'Дефицит снят — норма без вычета');
     } else {
-      toast('Введите значение от 500 до 8000 ккал');
+      toast('Введите дефицит от 0 до 2000 ккал');
       renderSettings();
     }
   });
@@ -1358,17 +1355,7 @@ function init() {
     }
   });
 
-  // Автоматический расчёт целей
-  el('#calcKcal').addEventListener('click', () => {
-    const p = readProfile();
-    if (!p) { toast('Заполните профиль: возраст, рост, вес'); return; }
-    state.settings.profile = p;
-    const goal = Math.round(calcTargetKcal(p) / 10) * 10;
-    state.settings.calorieGoal = goal;
-    saveState(); renderSettings(); renderDiary();
-    toast('Норма по профилю: ' + goal.toLocaleString('ru-RU') + ' ккал/день');
-  });
-
+  // Автоматический расчёт воды
   el('#calcWater').addEventListener('click', () => {
     const p = readProfile();
     if (!p) { toast('Заполните профиль: возраст, рост, вес'); return; }

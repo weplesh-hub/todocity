@@ -20,7 +20,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=56">
+<link rel="stylesheet" href="styles.css?v=57">
 </head>
 <body>
 
@@ -62,7 +62,7 @@
           </svg>
           <div class="ring-center">
             <span class="ring-num" id="kcalNum">0</span>
-            <span class="ring-cap" id="kcalCap"></span>
+            <span class="ring-cap" id="kcalCap" title="Норма дня = базовый обмен + активности − дефицит"></span>
           </div>
         </div>
         <div class="ring-title"><span class="ic" data-ico="flame"></span>Калории</div>
@@ -150,7 +150,7 @@
       </form>
       <div class="act-chips" id="actChips"></div>
       <div class="act-log" id="actLog"></div>
-      <p class="hint">Сожжённые калории добавляются к норме дня: что потратили — можно съесть сверх цели. Клик по записи — изменить.</p>
+      <p class="hint">Норма дня = базовый обмен + активности − дефицит (задаётся в настройках). Клик по записи — изменить калории.</p>
     </div>
   </section>
 
@@ -200,23 +200,25 @@
         <label>Возраст<input id="inAge" type="number" min="10" max="100" step="1"></label>
         <label>Вес, кг<input id="inWeight" type="number" min="30" max="300" step="0.1"></label>
         <label>Рост, см<input id="inHeight" type="number" min="120" max="230" step="1"></label>
-        <label class="span2">Активность<select id="inActivity"></select></label>
-        <label class="span2">Цель<select id="inAim"></select></label>
       </div>
       <p class="hint">Профиль сохраняется автоматически при изменении полей.</p>
     </div>
 
     <div class="card">
-      <h3 class="card-title"><span class="ic" data-ico="target"></span>Дневные цели</h3>
+      <h3 class="card-title"><span class="ic" data-ico="target"></span>Дневная норма</h3>
+      <div class="bmr-box">
+        <span class="bmr-label">Поддержание жизнедеятельности</span>
+        <div class="bmr-val" id="bmrVal">—</div>
+        <p class="hint" style="margin:6px 0 0">Базовый обмен по профилю — формула Миффлина — Сан Жеора.</p>
+      </div>
       <div class="food-grid">
-        <label>Калории, ккал<input id="inKcalGoal" type="number" min="500" max="8000" step="10"></label>
+        <label>Дефицит, ккал<input id="inDeficit" type="number" min="0" max="2000" step="10"></label>
         <label>Вода, мл<input id="inWaterGoal" type="number" min="500" max="8000" step="50"></label>
       </div>
       <div class="btn-row">
-        <button class="btn" id="calcKcal"><span class="ic" data-ico="calc"></span>Рассчитать калории по профилю</button>
         <button class="btn" id="calcWater"><span class="ic" data-ico="droplet"></span>Рассчитать воду (30 мл × вес)</button>
       </div>
-      <p class="hint">Расчёт калорий — по формуле Миффлина — Сан Жеора с учётом активности и цели (±15%). Цели сохраняются автоматически.</p>
+      <p class="hint">Норма дня = базовый обмен + сожжённые активности − дефицит. Активности добавляются в дневнике (секция «Активность»), дефицит 300–500 ккал — комфортный темп похудения.</p>
     </div>
 
     <div class="card">
@@ -242,6 +244,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=27"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>
