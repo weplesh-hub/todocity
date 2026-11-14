@@ -27,7 +27,7 @@
   document.documentElement.dataset.theme = t;
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=59">
+<link rel="stylesheet" href="styles.css?v=60">
 </head>
 <body>
 
@@ -69,7 +69,7 @@
           </svg>
           <div class="ring-center">
             <span class="ring-num" id="kcalNum">0</span>
-            <span class="ring-cap" id="kcalCap" title="Норма дня = базовый обмен + активности − дефицит"></span>
+            <span class="ring-cap" id="kcalCap" title="Норма дня = 1,2 × базовый обмен (вкл. TEF + NEAT) + активности − дефицит"></span>
           </div>
         </div>
         <div class="ring-title"><span class="ic" data-ico="flame"></span>Калории</div>
@@ -157,7 +157,7 @@
       </form>
       <div class="act-chips" id="actChips"></div>
       <div class="act-log" id="actLog"></div>
-      <p class="hint">Норма дня = базовый обмен + активности − дефицит (задаётся в настройках). Клик по записи — изменить название или калории.</p>
+      <p class="hint">Норма дня = 1,2 × базовый обмен (вкл. TEF + NEAT) + активности − дефицит (задаётся в настройках). Клик по записи — изменить название или калории.</p>
     </div>
   </section>
 
@@ -214,9 +214,18 @@
     <div class="card">
       <h3 class="card-title"><span class="ic" data-ico="target"></span>Дневная норма</h3>
       <div class="bmr-box">
-        <span class="bmr-label">Поддержание жизнедеятельности</span>
-        <div class="bmr-val" id="bmrVal">—</div>
-        <p class="hint" style="margin:6px 0 0">Базовый обмен по профилю — формула Миффлина — Сан Жеора.</p>
+        <div class="bmr-row">
+          <span class="bmr-label">Поддержание жизнедеятельности<small>базовый обмен — Миффлин — Сан Жеор</small></span>
+          <span class="bmr-num" id="bmrVal">—</span>
+        </div>
+        <div class="bmr-row">
+          <span class="bmr-label">TEF + NEAT<small>переваривание пищи и бытовая активность, 20% от обмена</small></span>
+          <span class="bmr-num" id="tefVal">—</span>
+        </div>
+        <div class="bmr-row bmr-total">
+          <span class="bmr-label">Итого суточный расход ×1,2</span>
+          <span class="bmr-num" id="bmrTotalVal">—</span>
+        </div>
       </div>
       <div class="food-grid">
         <label>Дефицит, ккал<input id="inDeficit" type="number" min="0" max="2000" step="10"></label>
@@ -225,7 +234,7 @@
       <div class="btn-row">
         <button class="btn" id="calcWater"><span class="ic" data-ico="droplet"></span>Рассчитать воду (30 мл × вес)</button>
       </div>
-      <p class="hint">Норма дня = базовый обмен + сожжённые активности − дефицит. Активности добавляются в дневнике (секция «Активность»), дефицит 300–500 ккал — комфортный темп похудения.</p>
+      <p class="hint">Норма дня = 1,2 × базовый обмен (включая TEF + NEAT) + сожжённые активности − дефицит. Активности добавляются в дневнике (секция «Активность»), дефицит 300–500 ккал — комфортный темп похудения.</p>
     </div>
 
     <div class="card">
@@ -251,6 +260,6 @@
 
 <div id="toast" role="status"></div>
 
-<script src="app.js?v=29"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>

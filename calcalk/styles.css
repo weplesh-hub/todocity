@@ -438,27 +438,34 @@ input::placeholder { color: var(--muted); opacity: .7; }
 .burn-note { color: var(--ok); font-weight: 700; }
 .h-burn { font-style: normal; color: var(--ok); font-size: 11.5px; font-weight: 700; margin-left: 3px; }
 
-/* ---------- Дневная норма в настройках: базовый обмен ---------- */
+/* ---------- Дневная норма в настройках: базовый обмен + TEF/NEAT ---------- */
 
 .bmr-box {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 9px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--kcal) 30%, var(--border));
   border-radius: 10px;
   background: color-mix(in srgb, var(--kcal) 7%, transparent);
   margin-bottom: 12px;
 }
+.bmr-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .bmr-label {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
-.bmr-val { font-size: 24px; font-weight: 800; color: var(--kcal); font-variant-numeric: tabular-nums; }
-.bmr-val small { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.bmr-label small { font-size: 11px; font-weight: 500; opacity: .8; }
+.bmr-num { font-size: 17px; font-weight: 800; color: var(--kcal); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bmr-num small { font-size: 11px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+.bmr-row.bmr-total { border-top: 1px dashed color-mix(in srgb, var(--kcal) 35%, var(--border)); padding-top: 9px; }
+.bmr-total .bmr-label { color: var(--text); text-transform: none; }
+.bmr-total .bmr-num { font-size: 21px; }
 
 .chip-del {
   border: none;

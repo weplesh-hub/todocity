@@ -983,14 +983,21 @@ function renderSettings() {
   updateBmrView();
 }
 
-// Базовый обмен в настройках: число из профиля или подсказка заполнить профиль
+// Базовый обмен в настройках: значение из профиля, строка TEF+NEAT и итог ×1,2
 function updateBmrView() {
   const v = el('#bmrVal');
   if (!v) return;
   const bmr = baseKcal();
-  v.innerHTML = bmr !== null
-    ? bmr.toLocaleString('ru-RU') + ' <small>ккал/день</small>'
-    : '<small>заполните профиль: пол, возраст, рост, вес</small>';
+  if (bmr === null) {
+    v.innerHTML = '<small>заполните профиль: пол, возраст, рост, вес</small>';
+    el('#tefVal').innerHTML = '—';
+    el('#bmrTotalVal').innerHTML = '—';
+    return;
+  }
+  const tef = Math.round(bmr * (TEF_NEAT_K - 1));
+  v.innerHTML = bmr.toLocaleString('ru-RU') + ' <small>ккал</small>';
+  el('#tefVal').innerHTML = '+' + tef.toLocaleString('ru-RU') + ' <small>ккал</small>';
+  el('#bmrTotalVal').innerHTML = Math.round(bmr * TEF_NEAT_K).toLocaleString('ru-RU') + ' <small>ккал/день</small>';
 }
 
 function readProfile() {
@@ -1012,11 +1019,15 @@ function baseKcal() {
   return Math.round(10 * w + 6.25 * h - 5 * a + (p.gender === 'female' ? -161 : 5));
 }
 
-// Норма дня = базовый обмен + сожжённые активности − заданный дефицит.
+// TEF + NEAT — затраты на переваривание пищи и бытовую активность:
+// 20% от базового обмена (итоговый множитель нормы ×1,2)
+const TEF_NEAT_K = 1.2;
+
+// Норма дня = 1,2 × базовый обмен (TEF+NEAT) + сожжённые активности − дефицит.
 // Профиль не заполнен — базой служит прежняя цель из настроек (calorieGoal).
 function dayGoalKcal(burn) {
   const base = baseKcal();
-  const b = base !== null ? base : +state.settings.calorieGoal || 0;
+  const b = (base !== null ? base : +state.settings.calorieGoal || 0) * TEF_NEAT_K;
   return Math.max(0, Math.round(b + (burn || 0) - (+state.settings.deficit || 0)));
 }
 
